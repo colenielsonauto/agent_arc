@@ -1,0 +1,17 @@
+{
+  "Support": {
+    "email": "support@company.com",
+    "escalation_email": "support-manager@company.com",
+    "response_time_sla": "4 hours"
+  },
+  "Billing": {
+    "email": "billing@company.com",
+    "escalation_email": "finance-manager@company.com",
+    "response_time_sla": "2 hours"
+  },
+  "Sales": {
+    "email": "sales@company.com",
+    "escalation_email": "sales-manager@company.com",
+    "response_time_sla": "1 hour"
+  }
+} 

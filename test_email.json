@@ -1,0 +1,5 @@
+{
+  "from": "jane@example.com",
+  "subject": "Invoice issue",
+  "body": "I was charged twice. Please help."
+} 
