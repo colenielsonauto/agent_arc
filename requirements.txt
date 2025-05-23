@@ -1,4 +1,6 @@
 google-cloud-pubsub
 google-cloud-aiplatform
 google-api-python-client
-flask 
+flask
+google-genai
+requests 
