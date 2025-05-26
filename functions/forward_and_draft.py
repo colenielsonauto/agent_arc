@@ -2,6 +2,14 @@ import os
 import json
 import base64
 import requests
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from common.scopes import GMAIL_SCOPES
+
+# If modifying these scopes, delete the file token.json.
+SCOPES = GMAIL_SCOPES
 
 def forward_and_draft(analysis_result):
     """
@@ -22,13 +30,9 @@ def forward_and_draft(analysis_result):
     routing_info = load_routing_config(classification)
     
     # Step 2: Forward email to appropriate team
-    # TODO: Implement email forwarding logic
-    # TODO: Use Gmail API or SMTP to send email
     forward_result = forward_email_to_team(email_data, routing_info)
     
     # Step 3: Generate draft reply using Vertex AI
-    # TODO: Load draft_reply.md prompt
-    # TODO: Call Vertex AI to generate personalized reply
     draft_reply = generate_draft_reply(email_data, details, classification)
     
     result = {
@@ -48,9 +52,49 @@ def load_routing_config(classification):
         roles_mapping = json.load(f)
     return roles_mapping.get(classification, roles_mapping["Support"])
 
+def get_gmail_service():
+    """Get authenticated Gmail service using OAuth2"""
+    creds = None
+    # The file token.json stores the user's access and refresh tokens.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+            except Exception as e:
+                print(f"Failed to refresh token: {e}")
+                creds = None
+        
+        if not creds:
+            if not os.path.exists('oauth_client.json'):
+                print("oauth_client.json not found. Using mock responses.")
+                return None
+            
+            try:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    'oauth_client.json', SCOPES)
+                creds = flow.run_local_server(port=0)
+            except Exception as e:
+                print(f"OAuth flow failed: {e}")
+                return None
+        
+        # Save the credentials for the next run
+        if creds:
+            with open('token.json', 'w') as token:
+                token.write(creds.to_json())
+    
+    try:
+        service = build('gmail', 'v1', credentials=creds)
+        return service
+    except Exception as e:
+        print(f"Failed to build Gmail service: {e}")
+        return None
+
 def forward_email_to_team(email_data, routing_info):
-    """Forward email to the appropriate team using Gmail REST API"""
-    api_key = os.getenv("GOOGLE_API_KEY")
+    """Forward email to the appropriate team using Gmail REST API with OAuth2"""
     sender_email = "testingemailrouter@gmail.com"
     
     # Create email content
@@ -73,41 +117,28 @@ Content-Type: text/plain; charset=utf-8
     # Base64 encode the message
     encoded_message = base64.urlsafe_b64encode(email_message.encode()).decode()
     
-    # Send via Gmail REST API
-    url = f"https://gmail.googleapis.com/gmail/v1/users/{sender_email}/messages/send"
-    headers = {"Content-Type": "application/json"}
-    payload = {"raw": encoded_message}
+    # Try to get authenticated Gmail service
+    service = get_gmail_service()
     
-    try:
-        response = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            params={"key": api_key}
-        )
-        
-        print(f"Gmail API response: {response.status_code}")
-        if response.status_code == 200:
-            return response.json()
-        else:
-            # API call failed, use mock response
-            print(f"Gmail API failed, using mock response")
-            return {
-                "id": "mock_message_id_12345",
-                "threadId": "mock_thread_id_67890", 
-                "labelIds": ["SENT"],
-                "snippet": f"Mock: Forwarded email to {routing_info['email']}"
-            }
+    if service:
+        try:
+            message = {'raw': encoded_message}
+            result = service.users().messages().send(userId='me', body=message).execute()
+            print(f"Gmail message sent successfully: {result['id']}")
+            return result
+        except Exception as e:
+            print(f"Gmail API Error (OAuth2): {e}")
+            # Fall back to mock response
+            pass
     
-    except Exception as e:
-        print(f"Gmail API Error (using mock): {e}")
-        # Mock successful email send for testing
-        return {
-            "id": "mock_message_id_12345",
-            "threadId": "mock_thread_id_67890",
-            "labelIds": ["SENT"],
-            "snippet": f"Forwarded email to {routing_info['email']}"
-        }
+    # Mock successful email send for testing (fallback when OAuth fails)
+    print("Using mock response (OAuth2 authentication failed or unavailable)")
+    return {
+        "id": "mock_message_id_oauth_12345",
+        "threadId": "mock_thread_id_oauth_67890",
+        "labelIds": ["SENT"],
+        "snippet": f"Mock OAuth2: Forwarded email to {routing_info['email']}"
+    }
 
 def generate_draft_reply(email_data, details, classification):
     """Generate AI-powered draft reply"""
