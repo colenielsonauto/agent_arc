@@ -1,17 +1,17 @@
 {
   "Support": {
-    "email": "support@company.com",
-    "escalation_email": "support-manager@company.com",
+    "email": "colenielson8@gmail.com",
+    "escalation_email": "colenielson.re@gmail.com",
     "response_time_sla": "4 hours"
   },
   "Billing": {
-    "email": "billing@company.com",
-    "escalation_email": "finance-manager@company.com",
+    "email": "colenielson.re@gmail.com",
+    "escalation_email": "colenielson8@gmail.com",
     "response_time_sla": "2 hours"
   },
   "Sales": {
-    "email": "sales@company.com",
-    "escalation_email": "sales-manager@company.com",
+    "email": "colenielson@u.boisestate.edu",
+    "escalation_email": "colenielson8@gmail.com",
     "response_time_sla": "1 hour"
   }
-} 
+}

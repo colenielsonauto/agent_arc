@@ -23,6 +23,8 @@ Thumbs.db
 *.json
 !test_email.json
 !roles_mapping.json
+!oauth_client.json
+!token.json
 
 # Logs
 *.log 

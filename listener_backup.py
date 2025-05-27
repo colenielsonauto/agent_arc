@@ -1,13 +1,11 @@
 """
 Pub/Sub background handler → AI pipeline.
 Triggered by Pub/Sub topic: email-inbound
-Cloud Functions gen‑2 style (entrypoint: pubsub_webhook)
+Cloud Functions gen‑1 style (entrypoint: pubsub_webhook)
 """
 import base64
 import json
 import logging
-from cloudevents.http import CloudEvent
-import functions_framework
 
 from functions.ingest_email import ingest_email
 from functions.analyze_email import analyze_email
@@ -62,35 +60,25 @@ def fetch_and_ingest_emails(gmail_event):
         return ingest_email(gmail_event)
 
 
-@functions_framework.cloud_event
-def pubsub_webhook(cloud_event: CloudEvent):
+def pubsub_webhook(event, context=None):
     """
-    Background function triggered by Pub/Sub CloudEvent.
-    `cloud_event` is the CloudEvent containing the Pub/Sub message.
+    Background function triggered by Pub/Sub.
+    `event` is the Pub/Sub message payload.
     """
-    logger.info("Received CloudEvent: %s", cloud_event)
+    # Coerce any raw string payload into JSON FIRST
+    if isinstance(event, str):
+        event = json.loads(event)
     
-    # Extract the Pub/Sub message from the CloudEvent
-    try:
-        # CloudEvent.data contains the Pub/Sub message
-        pubsub_message = cloud_event.data
-        
-        # Handle both string and dict formats
-        if isinstance(pubsub_message, str):
-            pubsub_message = json.loads(pubsub_message)
-            
-        logger.info("Extracted Pub/Sub message: %s", pubsub_message)
-        
-        # Extract the base64-encoded Gmail notification
-        # For CloudEvents, the structure is: cloud_event.data['message']['data']
-        raw_b64 = pubsub_message.get("message", {}).get("data")
-        
-        if not raw_b64:
-            raise ValueError(f"Invalid Pub/Sub message structure: {pubsub_message}")
-            
-    except Exception as e:
-        logger.error("Error extracting Pub/Sub message from CloudEvent: %s", e)
-        raise ValueError(f"Invalid CloudEvent format: {e}")
+    logger.info("Received Pub/Sub event: %s", event)
+
+
+    # Normalize the base64 extraction to try both Gen-2 and Gen-1 envelopes
+    raw_b64 = (
+        event.get("message", {}).get("data")
+        or event.get("data", {}).get("message", {}).get("data")
+    )
+    if not raw_b64:
+        raise ValueError(f"Invalid Pub/Sub event: {event}")
 
     try:
         raw = base64.b64decode(raw_b64)
