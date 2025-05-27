@@ -3,12 +3,28 @@ import json
 import base64
 import google.genai as genai
 
-# Initialize GenAI SDK with API key (using Google AI API, not Vertex AI)
-client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+# Global client variable - will be initialized lazily
+client = None
+
+def get_genai_client():
+    """Get or initialize the GenAI client lazily"""
+    global client
+    if client is None:
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if api_key:
+            client = genai.Client(api_key=api_key)
+        else:
+            return None
+    return client
 
 def load_prompt(filename: str) -> str:
     """Load a prompt template from the prompts/ directory."""
-    with open(f"prompts/{filename}", "r") as f:
+    import os
+    # Get the directory of this file and navigate to prompts
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    prompts_dir = os.path.join(current_dir, "..", "prompts")
+    prompt_path = os.path.join(prompts_dir, filename)
+    with open(prompt_path, "r") as f:
         return f.read().strip()
 
 # Preload prompts
@@ -27,6 +43,11 @@ def analyze_email(email_data: dict) -> dict:
     body    = email_data.get("body", "")
 
     try:
+        # Get client lazily
+        client = get_genai_client()
+        if not client:
+            raise Exception("No GOOGLE_API_KEY available")
+
         # 1. Classification
         classify_input = f"SUBJECT: {subject}\nBODY: {body}\n\n{prompt_classify}"
         classify_response = client.models.generate_content(

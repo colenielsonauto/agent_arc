@@ -19,12 +19,19 @@ env/
 .DS_Store
 Thumbs.db
 
-# Google Cloud credentials
-*.json
-!test_email.json
-!roles_mapping.json
-!oauth_client.json
-!token.json
+# Secure credentials directory
+.secrets/
+
+# Google Cloud credentials (legacy - now in .secrets/)
+# *.json
+# Allow specific config files in new structure
+!src/email_router/config/roles_mapping.json
+!tests/fixtures/test_email.json
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
 
 # Logs
 *.log 

@@ -2,7 +2,6 @@ import base64
 import json
 import email
 import re
-from flask import Request
 
 def ingest_email(event, context=None):
     """

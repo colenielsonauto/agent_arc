@@ -6,7 +6,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from common.scopes import GMAIL_SCOPES
+from ..config.scopes import GMAIL_SCOPES
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = GMAIL_SCOPES
@@ -47,8 +47,13 @@ def forward_and_draft(analysis_result):
 
 def load_routing_config(classification):
     """Load routing configuration from roles_mapping.json"""
-    # TODO: Add error handling for missing classifications
-    with open("roles_mapping.json", "r") as f:
+    import os
+    # Get the directory of this file and navigate to config
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    config_dir = os.path.join(current_dir, "..", "config")
+    config_path = os.path.join(config_dir, "roles_mapping.json")
+    
+    with open(config_path, "r") as f:
         roles_mapping = json.load(f)
     return roles_mapping.get(classification, roles_mapping["Support"])
 
@@ -56,8 +61,9 @@ def get_gmail_service():
     """Get authenticated Gmail service using OAuth2"""
     creds = None
     # The file token.json stores the user's access and refresh tokens.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    token_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".secrets", "token.json")
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
     
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
@@ -69,13 +75,13 @@ def get_gmail_service():
                 creds = None
         
         if not creds:
-            if not os.path.exists('oauth_client.json'):
+            oauth_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".secrets", "oauth_client.json")
+            if not os.path.exists(oauth_path):
                 print("oauth_client.json not found. Using mock responses.")
                 return None
             
             try:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    'oauth_client.json', SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(oauth_path, SCOPES)
                 creds = flow.run_local_server(port=0)
             except Exception as e:
                 print(f"OAuth flow failed: {e}")
@@ -83,7 +89,7 @@ def get_gmail_service():
         
         # Save the credentials for the next run
         if creds:
-            with open('token.json', 'w') as token:
+            with open(token_path, 'w') as token:
                 token.write(creds.to_json())
     
     try:
