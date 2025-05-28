@@ -116,8 +116,8 @@ python test_full_pipeline.py
 # Test specific email from test_email.json
 python -c "
 import json
-from functions.analyze_email import analyze_email
-from functions.forward_and_draft import forward_and_draft
+from email_router.core.analyze_email import analyze_email
+from email_router.core.forward_and_draft import forward_and_draft
 
 with open('test_email.json') as f:
     email = json.load(f)

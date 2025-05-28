@@ -16,7 +16,7 @@ Registers Gmail watch on the inbox to send push notifications to Pub/Sub topic f
    - Pub/Sub topic `email-inbound` exists (✅ confirmed)
 
 2. **OAuth2 Credentials**:
-   - Valid `oauth_client.json` in project root
+   - Valid `oauth_client.json` in `.secrets/` directory
    - OAuth2 client configured for Desktop Application
    - Scopes: `gmail.send` + `gmail.readonly`
 
@@ -31,7 +31,7 @@ Registers Gmail watch on the inbox to send push notifications to Pub/Sub topic f
 
 ```bash
 # From project root
-python tools/watch_gmail.py
+python scripts/watch_gmail.py
 ```
 
 #### What it does
@@ -70,7 +70,7 @@ python tools/watch_gmail.py
 ❌ OAuth flow failed: (invalid_client) Unauthorized
 ```
 **Solution**: 
-- Verify `oauth_client.json` contains valid Google Cloud OAuth2 credentials
+- Verify `.secrets/oauth_client.json` contains valid Google Cloud OAuth2 credentials
 - Ensure OAuth2 client is configured for "Desktop Application"
 - Check that Gmail API is enabled in Google Cloud Console
 

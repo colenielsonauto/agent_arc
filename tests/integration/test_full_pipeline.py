@@ -17,7 +17,12 @@ def test_pipeline_with_mocks():
     print("\n1. 📧 Email Ingestion")
     print("   └── Source: Pub/Sub / Gmail Watch (simulated)")
     
-    from functions.ingest_email import ingest_email
+    # Add src directory to Python path for imports
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'src'))
+    
+    from email_router.core.ingest_email import ingest_email
     email_data = ingest_email({'data': ''}, None)
     print(f"   └── ✅ Ingested: {email_data['from']} - '{email_data['subject']}'")
     
@@ -26,7 +31,7 @@ def test_pipeline_with_mocks():
     print("   └── Classification, Detail Extraction, Draft Generation")
     
     try:
-        from functions.analyze_email import analyze_email
+        from email_router.core.analyze_email import analyze_email
         analysis_result = analyze_email(email_data)
         print(f"   └── ✅ Classification: {analysis_result['classification']}")
         print(f"   └── ✅ Sender: {analysis_result['details']['sender']}")
@@ -55,7 +60,7 @@ def test_pipeline_with_mocks():
     print("\n3. 📤 Email Forwarding (OAuth2 Gmail)")
     print("   └── Authenticating with Google OAuth2...")
     
-    from functions.forward_and_draft import forward_and_draft
+    from email_router.core.forward_and_draft import forward_and_draft
     forward_result = forward_and_draft(analysis_result)
     
     print(f"   └── ✅ Forwarded to: {forward_result['forwarded_to']}")
@@ -93,7 +98,7 @@ def test_oauth_specifically():
     print("🔐 OAuth2 Gmail Integration Test")
     print("=" * 40)
     
-    from functions.forward_and_draft import get_gmail_service
+    from email_router.core.forward_and_draft import get_gmail_service
     
     print("\n1. Testing OAuth2 Authentication...")
     service = get_gmail_service()
@@ -112,7 +117,7 @@ def test_oauth_specifically():
         print("   └── ✅ Fallback to mock responses working correctly")
     
     print("\n2. OAuth2 Setup Instructions:")
-    print("   └── Ensure oauth_client.json has valid Google OAuth2 credentials")
+    print("   └── Ensure .secrets/oauth_client.json has valid Google OAuth2 credentials")
     print("   └── Run once to authorize and create token.json")
     print("   └── Subsequent runs will use cached credentials")
     

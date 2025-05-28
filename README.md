@@ -24,21 +24,22 @@ Follow these steps to get your Email Router MVP running in production:
 
 4. **Authenticate with Gmail** (browser OAuth flow):
    ```bash
-   python tools/test_gmail_auth.py
+   python scripts/test_gmail_auth.py
    ```
 
 5. **Register Gmail watch** (weekly renewal required):
    ```bash
-   python tools/watch_gmail.py
+   python scripts/watch_gmail.py
    ```
 
 6. **Run smoke test** (must show all ✅):
    ```bash
-   python tools/smoke_test.py
+   python scripts/smoke_test.py
    ```
 
 7. **Deploy Cloud Function**:
    ```bash
+   cd deployment
    gcloud functions deploy email-router-listener \
      --region=us-central1 \
      --runtime=python311 \
@@ -85,33 +86,46 @@ Follow these steps to get your Email Router MVP running in production:
 
 4. **OAuth2 Gmail Setup**:
    - Download OAuth2 credentials from Google Cloud Console
-   - Save as `oauth_client.json` in project root
+   - Save as `oauth_client.json` in `.secrets/` directory
    - Run the application once to complete OAuth2 flow and create `token.json`
 
 ## Project Structure
 
 ```
 email-router/
-├── .venv/
-├── requirements.txt
-├── README.md
-├── roles_mapping.json
-├── oauth_client.json          # OAuth2 credentials (user-provided)
-├── token.json                 # OAuth2 tokens (auto-generated)
-├── prompts/
-│   ├── classify_intent.md
-│   ├── extract_details.md
-│   └── draft_reply.md
-├── functions/
-│   ├── __init__.py
-│   ├── ingest_email.py
-│   ├── analyze_email.py
-│   └── forward_and_draft.py   # ✨ Updated with OAuth2
-├── tools/                     # ✨ New: Setup and management tools
-│   ├── README.md
-│   ├── watch_gmail.py         # Gmail watch registration
-│   └── test_gmail_auth.py     # Authentication testing
-└── test_email.json
+├── .secrets/                  # 🔐 Secure credentials
+│   ├── oauth_client.json     # OAuth2 credentials (user-provided)
+│   ├── token.json            # OAuth2 tokens (auto-generated)
+│   └── email-router-*.json   # Service account keys
+├── src/email_router/          # 📦 Main package
+│   ├── config/               # ⚙️ Configuration
+│   │   ├── roles_mapping.json
+│   │   └── scopes.py
+│   ├── core/                 # 🧠 Business logic
+│   │   ├── ingest_email.py
+│   │   ├── analyze_email.py
+│   │   └── forward_and_draft.py
+│   ├── handlers/             # 🎯 Entry points
+│   │   └── pubsub_handler.py
+│   └── prompts/              # 🤖 AI prompts
+│       ├── classify_intent.md
+│       ├── extract_details.md
+│       └── draft_reply.md
+├── tests/                     # 🧪 Testing
+│   ├── unit/
+│   ├── integration/
+│   └── fixtures/
+├── scripts/                   # 🛠️ Operational tools
+│   ├── test_gmail_auth.py
+│   ├── watch_gmail.py
+│   └── smoke_test.py
+├── deployment/                # 🚀 Cloud deployment
+│   ├── main.py               # Cloud Functions entry point
+│   ├── requirements.txt
+│   └── .gcloudignore
+├── docs/                      # 📚 Documentation
+├── pyproject.toml            # 🐍 Modern Python config
+└── README.md
 ```
 
 ## Usage
@@ -128,16 +142,16 @@ python test_oauth.py
 
 ### Test Email Ingestion Only
 ```bash
-python -c "from functions.ingest_email import ingest_email; print(ingest_email({'data':''}, None))"
+python -c "import sys; sys.path.insert(0, 'src'); from email_router.core.ingest_email import ingest_email; print(ingest_email({'data':''}, None))"
 ```
 
 ### Setup Gmail Watch (Real-time Processing)
 ```bash
 # Test Gmail API authentication first
-python tools/test_gmail_auth.py
+python scripts/test_gmail_auth.py
 
 # Register Gmail watch for push notifications
-python tools/watch_gmail.py
+python scripts/watch_gmail.py
 ```
 
 ### Run the Listener (Real-time Pipeline)
@@ -147,12 +161,13 @@ The listener processes incoming Gmail push notifications and triggers the AI pip
 #### Local Development
 ```bash
 # Test the CloudEvent handler directly
-python tools/smoke_test.py
+python scripts/smoke_test.py
 ```
 
 #### Cloud Functions Deployment
 ```bash
 # Deploy to Google Cloud Functions (2nd-gen, Pub/Sub trigger)
+cd deployment
 gcloud functions deploy email-router-listener \
   --region=us-central1 \
   --runtime=python311 \
@@ -191,11 +206,11 @@ python -m unittest tests/test_listener.py
 
 2. **Local Setup**:
    ```bash
-   # Place OAuth2 credentials in project root
-   cp ~/Downloads/client_secret_*.json oauth_client.json
+   # Place OAuth2 credentials in .secrets directory
+   cp ~/Downloads/client_secret_*.json .secrets/oauth_client.json
    
    # Run application to complete OAuth2 flow
-   python test_oauth.py
+   python scripts/test_gmail_auth.py
    ```
 
 3. **First Run**:
@@ -206,7 +221,7 @@ python -m unittest tests/test_listener.py
 ## Environment Variables
 
 - `GOOGLE_API_KEY`: Required for AI classification and analysis
-- OAuth2 credentials: Stored in `oauth_client.json` and `token.json`
+- OAuth2 credentials: Stored in `.secrets/oauth_client.json` and `.secrets/token.json`
 
 ## Renewing the Gmail Watch
 
@@ -214,7 +229,7 @@ Gmail watch registrations have a **7-day TTL (time-to-live)** and must be renewe
 
 ### Manual Renewal
 ```bash
-python tools/watch_gmail.py  # Re-register watch before expiration
+python scripts/watch_gmail.py  # Re-register watch before expiration
 ```
 
 ### Automated Renewal (TODO)
@@ -241,7 +256,7 @@ For production deployments, consider using Google Secret Manager for `token.json
 
 1. **Create secret**:
    ```bash
-   gcloud secrets create gmail-oauth-token --data-file=token.json
+   gcloud secrets create gmail-oauth-token --data-file=.secrets/token.json
    ```
 
 2. **Deploy with secret**:

@@ -26,8 +26,8 @@ def get_gmail_service():
     creds = None
     
     # Look for token.json in project root
-    token_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'token.json')
-    oauth_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'oauth_client.json')
+    token_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.secrets', 'token.json')
+    oauth_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.secrets', 'oauth_client.json')
     
     # The file token.json stores the user's access and refresh tokens.
     if os.path.exists(token_path):

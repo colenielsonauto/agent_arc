@@ -8,11 +8,11 @@ from unittest.mock import patch, MagicMock
 import sys
 import os
 
-# Add project root to Python path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add src directory to Python path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'src'))
 
 from cloudevents.http import CloudEvent
-from listener import pubsub_webhook
+from email_router.handlers.pubsub_handler import pubsub_webhook
 
 class TestListener(unittest.TestCase):
     """Test cases for the CloudEvent Pub/Sub webhook listener"""
@@ -36,10 +36,10 @@ class TestListener(unittest.TestCase):
         
         return CloudEvent(attrs, data)
     
-    @patch('listener.get_gmail_service')
-    @patch('listener.forward_and_draft')
-    @patch('listener.analyze_email') 
-    @patch('listener.ingest_email')
+    @patch('email_router.handlers.pubsub_handler.get_gmail_service')
+    @patch('email_router.handlers.pubsub_handler.forward_and_draft')
+    @patch('email_router.handlers.pubsub_handler.analyze_email') 
+    @patch('email_router.handlers.pubsub_handler.ingest_email')
     def test_pubsub_webhook_success(self, mock_ingest, mock_analyze, mock_forward, mock_gmail_service):
         """Test successful email processing pipeline with real Gmail schema"""
         # Setup mocks
@@ -154,7 +154,7 @@ class TestListener(unittest.TestCase):
         
         self.assertIn("Missing historyId", str(context.exception))
     
-    @patch('listener.ingest_email')
+    @patch('email_router.handlers.pubsub_handler.ingest_email')
     def test_pipeline_exception_handling(self, mock_ingest):
         """Test handling of exceptions during pipeline processing"""
         # Make ingest_email raise an exception

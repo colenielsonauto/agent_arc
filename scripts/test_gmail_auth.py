@@ -10,7 +10,12 @@ import sys
 # Add project root to path to import from functions
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from functions.forward_and_draft import get_gmail_service
+# Add src directory to Python path for imports
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
+
+from email_router.core.forward_and_draft import get_gmail_service
 
 def test_gmail_auth():
     """Test Gmail API authentication and basic permissions"""
@@ -25,7 +30,7 @@ def test_gmail_auth():
     if not service:
         print("❌ Failed to authenticate with Gmail API")
         print("\n💡 Troubleshooting:")
-        print("   - Ensure oauth_client.json exists and is valid")
+        print("   - Ensure .secrets/oauth_client.json exists and is valid")
         print("   - Check that Gmail API is enabled")
         print("   - Verify OAuth2 client permissions")
         return False
@@ -84,7 +89,7 @@ def test_gmail_auth():
     print("🔔 All required permissions verified")
     
     print(f"\n💡 Next Steps:")
-    print(f"   1. Run: python tools/watch_gmail.py")
+    print(f"   1. Run: python scripts/watch_gmail.py")
     print(f"   2. Verify Pub/Sub topic permissions")
     print(f"   3. Test with real email")
     

@@ -2,7 +2,7 @@
 """
 Email Router MVP - Smoke Test
 Verifies complete setup: OAuth, Gmail watch, message processing pipeline.
-Run: python tools/smoke_test.py
+Run: python scripts/smoke_test.py
 """
 
 import os
@@ -11,26 +11,28 @@ import json
 import datetime
 from pathlib import Path
 
-# Add project root to path for imports
+# Add src directory to path for imports
 script_dir = Path(__file__).parent
 project_root = script_dir.parent
-sys.path.insert(0, str(project_root))
+src_dir = project_root / 'src'
+sys.path.insert(0, str(src_dir))
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from common.scopes import GMAIL_SCOPES
+from email_router.config.scopes import GMAIL_SCOPES
 
 # Test configuration
 REQUIRED_FILES = [
-    'token.json',
-    'oauth_client.json', 
-    'roles_mapping.json',
-    'common/scopes.py',
-    'functions/ingest_email.py',
-    'functions/analyze_email.py',
-    'functions/forward_and_draft.py',
-    'listener.py'
+    '.secrets/token.json',
+    '.secrets/oauth_client.json', 
+    'src/email_router/config/roles_mapping.json',
+    'src/email_router/config/scopes.py',
+    'src/email_router/core/ingest_email.py',
+    'src/email_router/core/analyze_email.py',
+    'src/email_router/core/forward_and_draft.py',
+    'src/email_router/handlers/pubsub_handler.py',
+    'deployment/main.py'
 ]
 
 REQUIRED_ENV_VARS = [
@@ -89,7 +91,7 @@ def check_required_files():
 def get_gmail_service():
     """Get authenticated Gmail service"""
     creds = None
-    token_path = project_root / 'token.json'
+    token_path = project_root / '.secrets' / 'token.json'
     
     if token_path.exists():
         try:
@@ -98,7 +100,7 @@ def get_gmail_service():
             print_result("Token file parsing", False, f"Error: {e}")
             return None
     else:
-        print_result("Token file", False, "token.json not found")
+        print_result("Token file", False, ".secrets/token.json not found")
         return None
     
     # Check if credentials are valid
@@ -140,7 +142,7 @@ def check_oauth_authentication():
         print_result("Gmail API access", True, f"Connected as: {email_address}")
         
         # Check scopes in token
-        token_path = project_root / 'token.json'
+        token_path = project_root / '.secrets' / 'token.json'
         with open(token_path, 'r') as f:
             token_data = json.load(f)
         
@@ -195,9 +197,9 @@ def test_message_processing():
     
     try:
         # Import pipeline functions
-        from functions.ingest_email import ingest_email
-        from functions.analyze_email import analyze_email
-        from functions.forward_and_draft import forward_and_draft
+        from email_router.core.ingest_email import ingest_email
+        from email_router.core.analyze_email import analyze_email
+        from email_router.core.forward_and_draft import forward_and_draft
         
         print_result("Pipeline imports", True, "All functions imported successfully")
         
@@ -245,7 +247,7 @@ def test_pubsub_webhook():
         import base64
         import json
         from cloudevents.http import CloudEvent
-        from listener import pubsub_webhook
+        from email_router.handlers.pubsub_handler import pubsub_webhook
         
         print_result("CloudEvent imports", True, "All imports successful")
         
