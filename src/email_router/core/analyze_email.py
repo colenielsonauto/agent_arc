@@ -10,9 +10,11 @@ def get_genai_client():
     """Get or initialize the GenAI client lazily"""
     global client
     if client is None:
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if api_key:
-            client = genai.Client(api_key=api_key)
+        # Import here to ensure environment is loaded
+        from ..config.env import GOOGLE_API_KEY
+        
+        if GOOGLE_API_KEY:
+            client = genai.Client(api_key=GOOGLE_API_KEY)
         else:
             return None
     return client
@@ -54,8 +56,22 @@ def analyze_email(email_data: dict) -> dict:
             model="gemini-1.5-flash",
             contents=classify_input
         )
-        # Parse JSON response for classification
-        classification = json.loads(classify_response.text)["label"]
+        
+        # Handle response format - try JSON first, fallback to text parsing
+        try:
+            classification_data = json.loads(classify_response.text)
+            classification = classification_data.get("label", "Support")
+        except (json.JSONDecodeError, KeyError):
+            # Fallback: extract classification from text response
+            response_text = classify_response.text.strip()
+            if "Support" in response_text:
+                classification = "Support"
+            elif "Sales" in response_text:
+                classification = "Sales"
+            elif "Billing" in response_text:
+                classification = "Billing"
+            else:
+                classification = "Support"  # Default
 
         # 2. Detail Extraction  
         extract_input = f"{body}\n\n{prompt_extract}"
@@ -63,7 +79,18 @@ def analyze_email(email_data: dict) -> dict:
             model="gemini-1.5-pro",
             contents=extract_input
         )
-        details = json.loads(extract_response.text)
+        
+        # Handle response format - try JSON first, fallback to structured data
+        try:
+            details = json.loads(extract_response.text)
+        except json.JSONDecodeError:
+            # Fallback: create structured details from text
+            details = {
+                "sender": email_data.get("from", "unknown"),
+                "request": f"Inquiry about: {subject}",
+                "deadline": None,
+                "attachments": []
+            }
 
         # 3. Draft Reply
         draft_input = f"{body}\n\n{prompt_draft}"
@@ -71,7 +98,7 @@ def analyze_email(email_data: dict) -> dict:
             model="gemini-1.5-pro", 
             contents=draft_input
         )
-        draft = draft_response.text
+        draft = draft_response.text.strip()
 
     except Exception as e:
         print(f"API Error (using mock data): {e}")

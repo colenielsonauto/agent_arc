@@ -22,6 +22,11 @@ Thumbs.db
 # Secure credentials directory
 .secrets/
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # Google Cloud credentials (legacy - now in .secrets/)
 # *.json
 # Allow specific config files in new structure

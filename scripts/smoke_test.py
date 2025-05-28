@@ -67,13 +67,24 @@ def check_environment_variables():
     print_section("Environment Variables")
     all_present = True
     
+    # Import environment config to load .env file
+    from email_router.config.env import GOOGLE_API_KEY
+    
     for var in REQUIRED_ENV_VARS:
-        value = os.getenv(var)
-        if value:
-            print_result(f"Environment: {var}", True, f"Set (length: {len(value)})")
+        if var == 'GOOGLE_API_KEY':
+            # Check our loaded environment variable
+            if GOOGLE_API_KEY:
+                print_result(f"Environment: {var}", True, f"Loaded from .env (length: {len(GOOGLE_API_KEY)})")
+            else:
+                print_result(f"Environment: {var}", False, "Not found in .env file")
+                all_present = False
         else:
-            print_result(f"Environment: {var}", False, "Not set")
-            all_present = False
+            value = os.getenv(var)
+            if value:
+                print_result(f"Environment: {var}", True, f"Set (length: {len(value)})")
+            else:
+                print_result(f"Environment: {var}", False, "Not set")
+                all_present = False
     
     return all_present
 

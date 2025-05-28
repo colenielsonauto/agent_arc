@@ -12,7 +12,9 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from common.scopes import GMAIL_SCOPES
+# Add src directory to Python path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
+from email_router.config.scopes import GMAIL_SCOPES
 
 # Gmail API scopes - need both send and readonly for watch
 SCOPES = GMAIL_SCOPES
