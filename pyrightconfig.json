@@ -1,0 +1,35 @@
+{
+    "include": [
+        "src",
+        "scripts",
+        "tests",
+        "deployment"
+    ],
+    "exclude": [
+        "**/__pycache__",
+        ".venv",
+        ".git"
+    ],
+    "extraPaths": [
+        "./src"
+    ],
+    "pythonVersion": "3.9",
+    "pythonPlatform": "Darwin",
+    "executionEnvironments": [
+        {
+            "root": "src"
+        },
+        {
+            "root": "scripts",
+            "extraPaths": ["./src"]
+        },
+        {
+            "root": "tests",
+            "extraPaths": ["./src"]
+        },
+        {
+            "root": "deployment",
+            "extraPaths": ["./src"]
+        }
+    ]
+} 
