@@ -1,42 +1,117 @@
-# Python cache files
+# Email Router - Production .gitignore
+
+# ================================
+# SECRETS & CREDENTIALS (CRITICAL!)
+# ================================
+.secrets/
+*.json
+!**/roles_mapping.json
+!**/config/*.json
+.env
+.env.local
+.env.production
+token.json
+oauth_client.json
+service-account.json
+credentials.json
+
+# ================================
+# PYTHON
+# ================================
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Virtual environment (already in git, but good to have)
+# ================================
+# VIRTUAL ENVIRONMENTS
+# ================================
 .venv/
 venv/
 ENV/
 env/
+.env/
 
-# IDE files
+# ================================
+# TESTING & COVERAGE
+# ================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# ================================
+# DEVELOPMENT TOOLS
+# ================================
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS files
+*~
 .DS_Store
 Thumbs.db
 
-# Secure credentials directory
-.secrets/
+# ================================
+# GOOGLE CLOUD & DEPLOYMENT
+# ================================
+.gcloud/
+.gcloudignore
+deployment.zip
+.deployment/
 
-# Environment variables
-.env
-.env.local
-.env.*.local
+# ================================
+# CI/CD & GITHUB
+# ================================
+.github/workflows/secrets.yml
 
-# Google Cloud credentials (legacy - now in .secrets/)
-# *.json
-# Allow specific config files in new structure
-!src/email_router/config/roles_mapping.json
-!tests/fixtures/test_email.json
+# ================================
+# LOGS & TEMPORARY FILES
+# ================================
+*.log
+logs/
+temp/
+tmp/
+.cache/
 
-# Build and distribution
-build/
-dist/
-*.egg-info/
+# ================================
+# PROJECT SPECIFIC
+# ================================
+# Temporary test files
+test_*.py
+!tests/test_*.py
 
-# Logs
-*.log 
+# Local configuration overrides
+local_config.py
+debug_*.py
+
+# Email processing artifacts
+processed_emails/
+email_cache/
+
+# ================================
+# DOCUMENTATION DRAFTS
+# ================================
+docs/drafts/
+*.draft.md
+

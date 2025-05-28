@@ -1,10 +1,12 @@
-import os
 import json
-import base64
-import google.genai as genai
+import logging
+import google.generativeai as genai
+
+logger = logging.getLogger(__name__)
 
 # Global client variable - will be initialized lazily
 client = None
+
 
 def get_genai_client():
     """Get or initialize the GenAI client lazily"""
@@ -12,16 +14,19 @@ def get_genai_client():
     if client is None:
         # Import here to ensure environment is loaded
         from ..config.env import GOOGLE_API_KEY
-        
+
         if GOOGLE_API_KEY:
-            client = genai.Client(api_key=GOOGLE_API_KEY)
+            genai.configure(api_key=GOOGLE_API_KEY)
+            client = genai
         else:
             return None
     return client
 
+
 def load_prompt(filename: str) -> str:
     """Load a prompt template from the prompts/ directory."""
     import os
+
     # Get the directory of this file and navigate to prompts
     current_dir = os.path.dirname(os.path.abspath(__file__))
     prompts_dir = os.path.join(current_dir, "..", "prompts")
@@ -29,10 +34,12 @@ def load_prompt(filename: str) -> str:
     with open(prompt_path, "r") as f:
         return f.read().strip()
 
+
 # Preload prompts
 prompt_classify = load_prompt("classify_intent.md")
-prompt_extract  = load_prompt("extract_details.md")
-prompt_draft    = load_prompt("draft_reply.md")
+prompt_extract = load_prompt("extract_details.md")
+prompt_draft = load_prompt("draft_reply.md")
+
 
 def analyze_email(email_data: dict) -> dict:
     """
@@ -42,7 +49,7 @@ def analyze_email(email_data: dict) -> dict:
       3. Draft a response via gemini-1.5-pro
     """
     subject = email_data.get("subject", "")
-    body    = email_data.get("body", "")
+    body = email_data.get("body", "")
 
     try:
         # Get client lazily
@@ -52,11 +59,10 @@ def analyze_email(email_data: dict) -> dict:
 
         # 1. Classification
         classify_input = f"SUBJECT: {subject}\nBODY: {body}\n\n{prompt_classify}"
-        classify_response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=classify_input
+        classify_response = client.GenerativeModel("gemini-1.5-flash").generate_content(
+            classify_input
         )
-        
+
         # Handle response format - try JSON first, fallback to text parsing
         try:
             classification_data = json.loads(classify_response.text)
@@ -73,13 +79,12 @@ def analyze_email(email_data: dict) -> dict:
             else:
                 classification = "Support"  # Default
 
-        # 2. Detail Extraction  
+        # 2. Detail Extraction
         extract_input = f"{body}\n\n{prompt_extract}"
-        extract_response = client.models.generate_content(
-            model="gemini-1.5-pro",
-            contents=extract_input
+        extract_response = client.GenerativeModel("gemini-1.5-pro").generate_content(
+            extract_input
         )
-        
+
         # Handle response format - try JSON first, fallback to structured data
         try:
             details = json.loads(extract_response.text)
@@ -89,35 +94,40 @@ def analyze_email(email_data: dict) -> dict:
                 "sender": email_data.get("from", "unknown"),
                 "request": f"Inquiry about: {subject}",
                 "deadline": None,
-                "attachments": []
+                "attachments": [],
             }
 
-        # 3. Draft Reply
-        draft_input = f"{body}\n\n{prompt_draft}"
-        draft_response = client.models.generate_content(
-            model="gemini-1.5-pro", 
-            contents=draft_input
+        # 3. Draft Reply Generation
+        draft_input = (
+            f"Original Email:\nFrom: {email_data.get('from')}\n"
+            f"Subject: {subject}\nBody: {body}\n\n{prompt_draft}"
+        )
+        draft_response = client.GenerativeModel("gemini-1.5-pro").generate_content(
+            draft_input
         )
         draft = draft_response.text.strip()
 
     except Exception as e:
-        print(f"API Error (using mock data): {e}")
+        logger.error(f"API Error (using mock data): {e}")
         # Mock responses for testing when API is not available
         classification = "Support"
         details = {
             "sender": email_data.get("from", "unknown"),
             "request": f"Inquiry about: {subject}",
             "deadline": None,
-            "attachments": []
+            "attachments": [],
         }
-        draft = f"Thank you for your message regarding '{subject}'. We have received your inquiry and will respond shortly."
+        draft = (
+            f"Thank you for your message regarding '{subject}'. "
+            "We have received your inquiry and will respond shortly."
+        )
 
     result = {
         "email": email_data,
         "classification": classification,
         "details": details,
-        "draft": draft
+        "draft": draft,
     }
 
-    print("Analysis result:", result)
+    logger.info("Analysis result: %s", result)
     return result
