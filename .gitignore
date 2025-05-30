@@ -115,3 +115,9 @@ email_cache/
 docs/drafts/
 *.draft.md
 
+.venv/
+.env
+.secrets/
+__pycache__/
+*.pyc
+.DS_Store
