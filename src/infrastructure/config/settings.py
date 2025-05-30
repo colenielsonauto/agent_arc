@@ -26,9 +26,9 @@ class LLMSettings(BaseSettings):
     openai_model: str = Field("gpt-4-turbo-preview", env="OPENAI_MODEL")
     openai_org_id: Optional[str] = Field(None, env="OPENAI_ORG_ID")
     
-    # Anthropic - Updated with provided API key
+    # Anthropic
     anthropic_api_key: Optional[SecretStr] = Field(
-        SecretStr("your-anthropic-api-key-here "),
+        SecretStr("your-anthropic-api-key-here"),
         env="ANTHROPIC_API_KEY"
     )
     anthropic_model: str = Field("claude-3-5-sonnet-20241022", env="ANTHROPIC_MODEL")

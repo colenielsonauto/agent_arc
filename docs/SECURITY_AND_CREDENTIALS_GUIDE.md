@@ -38,7 +38,7 @@ The Email Router implements a **defense-in-depth** security model:
 ## 📋 **Current Configuration Status**
 
 ### ✅ **Already Configured**
-- **Anthropic API**: `sk-ant-api03-2cPyDcK-...` (Set as default LLM)
+- **Anthropic API**: `your-anthropic-api-key-here` (Set as default LLM)
 - **Mailgun API**: `965c944a7c37ffca...` (Email sending)
 - **Model**: Claude 3.5 Sonnet (Latest version)
 - **Security**: All keys stored as `SecretStr` with proper validation
@@ -60,7 +60,7 @@ nano .env
 **Your `.env` file should look like:**
 ```bash
 # LLM Configuration
-ANTHROPIC_API_KEY=your-anthropic-api-key-here 
+ANTHROPIC_API_KEY=your-anthropic-api-key-here
 ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 LLM_DEFAULT_PROVIDER=anthropic
 
@@ -229,7 +229,7 @@ cd email_router
 cp .env.example .env
 
 # 3. Add your keys to .env
-echo "ANTHROPIC_API_KEY=your-key-here" >> .env
+echo "ANTHROPIC_API_KEY=your-anthropic-api-key-here" >> .env
 
 # 4. Install dependencies
 pip install -e .
@@ -331,7 +331,7 @@ python examples/anthropic_example.py
 **2. Move to environment variables (recommended):**
 ```bash
 # Create .env file
-echo "ANTHROPIC_API_KEY=your-anthropic-api-key-here " > .env
+echo "ANTHROPIC_API_KEY=your-anthropic-api-key-here" > .env
 
 # Remove from source code (we'll do this in production)
 ```
