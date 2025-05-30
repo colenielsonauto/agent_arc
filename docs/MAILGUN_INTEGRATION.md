@@ -1,4 +1,4 @@
-# Mailgun Integration Guide
+# 📧 Mailgun Integration Guide
 
 ## Overview
 
@@ -24,23 +24,27 @@ The Mailgun integration consists of several components that fit into the existin
 
 ## Configuration
 
-### Default Credentials
-The system is pre-configured with your provided Mailgun credentials:
-
-```python
-# From src/infrastructure/config/settings.py
-mailgun_api_key: SecretStr = "your-mailgun-api-key-here"
-mailgun_domain: str = "sandboxeadaeacc0bf24d2b9e19f6eec262f504.mailgun.org"
-mailgun_base_url: str = "https://api.mailgun.net"
-```
-
 ### Environment Variables
-You can override these settings using environment variables:
+
+Add these to your `.env` file:
 
 ```bash
-export MAILGUN_API_KEY="your-api-key-here"
-export MAILGUN_DOMAIN="your-domain.mailgun.org"
-export MAILGUN_BASE_URL="https://api.mailgun.net"
+# Mailgun Configuration
+MAILGUN_API_KEY=your-mailgun-api-key-here
+MAILGUN_DOMAIN=your-domain.mailgun.org
+```
+
+### Settings Class
+
+The configuration is managed through Pydantic settings:
+
+```python
+class EmailSettings(BaseSettings):
+    mailgun_api_key: SecretStr = "your-mailgun-api-key-here"
+    mailgun_domain: str = "your-domain.mailgun.org"
+    
+    class Config:
+        env_file = ".env"
 ```
 
 ## Usage Examples
