@@ -14,8 +14,8 @@ import os
 class LLMSettings(BaseSettings):
     """LLM provider settings."""
     
-    # Default provider
-    default_provider: str = Field("google", env="LLM_DEFAULT_PROVIDER")
+    # Default provider - Changed to Anthropic for privacy
+    default_provider: str = Field("anthropic", env="LLM_DEFAULT_PROVIDER")
     
     # Google Gemini
     google_api_key: Optional[SecretStr] = Field(None, env="GOOGLE_API_KEY")
@@ -26,9 +26,12 @@ class LLMSettings(BaseSettings):
     openai_model: str = Field("gpt-4-turbo-preview", env="OPENAI_MODEL")
     openai_org_id: Optional[str] = Field(None, env="OPENAI_ORG_ID")
     
-    # Anthropic
-    anthropic_api_key: Optional[SecretStr] = Field(None, env="ANTHROPIC_API_KEY")
-    anthropic_model: str = Field("claude-3-opus-20240229", env="ANTHROPIC_MODEL")
+    # Anthropic - Updated with provided API key
+    anthropic_api_key: Optional[SecretStr] = Field(
+        SecretStr("your-anthropic-api-key-here "),
+        env="ANTHROPIC_API_KEY"
+    )
+    anthropic_model: str = Field("claude-3-5-sonnet-20241022", env="ANTHROPIC_MODEL")
     
     # Common settings
     temperature: float = Field(0.7, ge=0.0, le=2.0, env="LLM_TEMPERATURE")
@@ -64,8 +67,18 @@ class EmailSettings(BaseSettings):
     )
     
     # Mailgun
-    mailgun_api_key: Optional[SecretStr] = Field(None, env="MAILGUN_API_KEY")
-    mailgun_domain: Optional[str] = Field(None, env="MAILGUN_DOMAIN")
+    mailgun_api_key: Optional[SecretStr] = Field(
+        SecretStr("your-mailgun-api-key-here"),
+        env="MAILGUN_API_KEY"
+    )
+    mailgun_domain: Optional[str] = Field(
+        "sandboxeadaeacc0bf24d2b9e19f6eec262f504.mailgun.org",
+        env="MAILGUN_DOMAIN"
+    )
+    mailgun_base_url: str = Field(
+        "https://api.mailgun.net",
+        env="MAILGUN_BASE_URL"
+    )
     
     # Common settings
     polling_interval: int = Field(60, env="EMAIL_POLLING_INTERVAL")
@@ -257,6 +270,15 @@ class Settings(BaseSettings):
                 "max_tokens": self.llm.max_tokens,
                 "timeout": self.llm.timeout,
             }
+        elif provider == "anthropic":
+            return {
+                "provider": "anthropic",
+                "api_key": self.llm.anthropic_api_key.get_secret_value() if self.llm.anthropic_api_key else None,
+                "model": self.llm.anthropic_model,
+                "temperature": self.llm.temperature,
+                "max_tokens": self.llm.max_tokens,
+                "timeout": self.llm.timeout,
+            }
         else:
             raise ValueError(f"Unknown LLM provider: {provider}")
     
@@ -281,6 +303,7 @@ class Settings(BaseSettings):
                 "credentials": {
                     "api_key": self.email.mailgun_api_key.get_secret_value() if self.email.mailgun_api_key else None,
                     "domain": self.email.mailgun_domain,
+                    "base_url": self.email.mailgun_base_url,
                 },
                 "polling_interval": self.email.polling_interval,
                 "batch_size": self.email.batch_size,
