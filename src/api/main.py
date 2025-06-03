@@ -452,8 +452,8 @@ Draft Response:
                     "messages": [{"role": "user", "content": prompt}]
                 },
                 timeout=30.0
-            )
-            
+        )
+        
             response.raise_for_status()
             result = response.json()
             
