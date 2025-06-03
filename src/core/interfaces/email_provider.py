@@ -49,13 +49,13 @@ class EmailAttachment:
 class Email:
     """Core email entity."""
     id: str
-    thread_id: Optional[str]
     from_address: EmailAddress
     to_addresses: List[EmailAddress]
-    cc_addresses: List[EmailAddress] = field(default_factory=list)
-    bcc_addresses: List[EmailAddress] = field(default_factory=list)
     subject: str
     body_text: str
+    thread_id: Optional[str] = None
+    cc_addresses: List[EmailAddress] = field(default_factory=list)
+    bcc_addresses: List[EmailAddress] = field(default_factory=list)
     body_html: Optional[str] = None
     date: datetime = field(default_factory=datetime.utcnow)
     attachments: List[EmailAttachment] = field(default_factory=list)

@@ -9,7 +9,11 @@ to send emails programmatically.
 import asyncio
 import sys
 import os
+import logging
 from pathlib import Path
+
+# Configure logging to see debug output
+logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(name)s - %(message)s')
 
 # Add the src directory to the Python path
 src_path = Path(__file__).parent.parent / "src"

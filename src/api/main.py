@@ -4,7 +4,7 @@ FastAPI application for the Email Router system.
 This serves as the main entry point for the AI-powered email processing.
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -226,6 +226,372 @@ async def mailgun_webhook(background_tasks: BackgroundTasks):
     except Exception as e:
         logger.error(f"Webhook processing failed: {e}")
         raise HTTPException(status_code=500, detail="Webhook processing failed")
+
+@app.post("/webhooks/mailgun/inbound")
+async def mailgun_inbound_webhook(request: Request, background_tasks: BackgroundTasks):
+    """
+    Webhook endpoint for receiving inbound emails from Mailgun.
+    Processes incoming emails through AI classification and routing.
+    """
+    try:
+        # Get the raw form data from Mailgun
+        form_data = await request.form()
+        
+        # Extract email data from Mailgun webhook
+        email_data = {
+            "from": form_data.get("from", "unknown@domain.com"),
+            "to": form_data.get("recipient", ""),
+            "subject": form_data.get("subject", "No Subject"),
+            "body_text": form_data.get("body-plain", ""),
+            "body_html": form_data.get("body-html", ""),
+            "timestamp": form_data.get("timestamp", ""),
+            "sender": form_data.get("sender", ""),
+            "stripped_text": form_data.get("stripped-text", ""),
+            "message_headers": form_data.get("message-headers", ""),
+        }
+        
+        logger.info(f"📧 Received inbound email: From={email_data['from']}, Subject={email_data['subject']}")
+        
+        # TODO: Verify webhook signature for security
+        # signature = form_data.get("signature", "")
+        # timestamp = form_data.get("timestamp", "")
+        # token = form_data.get("token", "")
+        
+        # Process email in background
+        background_tasks.add_task(process_inbound_email, email_data)
+        
+        # Return 200 immediately to Mailgun
+        return {"status": "received", "message": "Email processing started"}
+        
+    except Exception as e:
+        logger.error(f"Inbound webhook processing failed: {e}")
+        # Still return 200 to prevent Mailgun retries for this error
+        return {"status": "error", "message": str(e)}
+
+async def process_inbound_email(email_data: dict):
+    """
+    Background task to process incoming email through AI classification and routing.
+    """
+    try:
+        logger.info(f"🤖 Processing email: {email_data['subject']}")
+        
+        # Step 1: Classify the email using AI
+        classifier = AIEmailClassifier()
+        classification_result = await classifier.classify_email(
+            subject=email_data['subject'],
+            body=email_data['stripped_text'] or email_data['body_text'],
+            sender=email_data['from']
+        )
+        
+        logger.info(f"📊 Classification: {classification_result['category']} (confidence: {classification_result['confidence']})")
+        
+        # Step 2: Determine routing based on classification
+        routing_rules = {
+            "support": "colenielson.re@gmail.com",    # Support inquiries
+            "billing": "colenielson8@gmail.com",      # Billing and payment issues
+            "sales": "colenielson@u.boisestate.edu",  # Sales and pricing inquiries
+            "technical": "colenielson.re@gmail.com",  # Technical problems
+            "complaint": "colenielson8@gmail.com",    # Complaints and escalations
+            "general": "colenielson.re@gmail.com"     # General inquiries (fallback)
+        }
+        
+        category = classification_result['category']
+        forward_to = routing_rules.get(category, routing_rules['general'])
+        
+        # Step 3: Generate AI response draft
+        draft_response = await generate_response_draft(email_data, classification_result)
+        
+        # Step 4: Send auto-reply to the customer
+        auto_reply_result = await send_auto_reply_to_customer(
+            original_email=email_data,
+            classification=classification_result,
+            draft_response=draft_response
+        )
+        
+        # Step 5: Forward email with draft response to team
+        forwarding_result = await forward_email_with_draft(
+            original_email=email_data,
+            forward_to=forward_to,
+            classification=classification_result,
+            draft_response=draft_response
+        )
+        
+        logger.info(f"✅ Email processed successfully: Auto-replied to customer and forwarded to {forward_to}")
+        
+    except Exception as e:
+        logger.error(f"❌ Error processing inbound email: {e}")
+
+async def generate_response_draft(email_data: dict, classification: dict) -> str:
+    """Generate a draft response using AI."""
+    try:
+        classifier = AIEmailClassifier()
+        
+        prompt = f"""
+You are a professional customer service assistant. Generate a helpful draft response for this customer email.
+
+Original Email:
+From: {email_data['from']}
+Subject: {email_data['subject']}
+Message: {email_data['stripped_text'] or email_data['body_text']}
+
+Classification: {classification['category']} (confidence: {classification['confidence']})
+Reasoning: {classification['reasoning']}
+
+Generate a professional, helpful draft response that:
+1. Acknowledges their message
+2. Shows understanding of their {classification['category']} inquiry
+3. Provides next steps or helpful information
+4. Maintains a professional but friendly tone
+
+Keep the response concise but helpful. End with a professional closing.
+
+Draft Response:
+"""
+        
+        # Use httpx client directly like in the classifier
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{classifier.base_url}/v1/messages",
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": classifier.api_key,
+                    "anthropic-version": "2023-06-01"
+                },
+                json={
+                    "model": classifier.model,
+                    "max_tokens": 500,
+                    "temperature": 0.7,
+                    "messages": [{"role": "user", "content": prompt}]
+                },
+                timeout=30.0
+            )
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            return result["content"][0]["text"].strip()
+        
+    except Exception as e:
+        logger.error(f"Error generating response draft: {e}")
+        return f"Thank you for your message regarding {classification['category']}. We have received your inquiry and will respond within 24 hours."
+
+async def send_auto_reply_to_customer(original_email: dict, classification: dict, draft_response: str) -> dict:
+    """Send an automatic personalized reply back to the original customer."""
+    try:
+        # Import your existing Mailgun adapter
+        from src.infrastructure.config.settings import reload_settings
+        from src.adapters.email.mailgun import MailgunAdapter
+        from src.core.interfaces.email_provider import EmailProviderConfig, EmailProvider, EmailAddress
+        
+        # Get Mailgun configuration
+        settings = reload_settings()
+        email_config = settings.get_email_config("mailgun")
+        
+        config = EmailProviderConfig(
+            provider=EmailProvider.MAILGUN,
+            credentials=email_config["credentials"],
+            polling_interval=60,
+            batch_size=50,
+        )
+        
+        adapter = MailgunAdapter(config)
+        await adapter.connect()
+        
+        # Create customer-facing subject line
+        customer_subject = f"Re: {original_email['subject']}"
+        
+        # Plain text version for customer
+        customer_body_text = f"""
+Thank you for contacting our support team!
+
+{draft_response}
+
+We have received your message and our team is already working on your {classification['category']} inquiry. You can expect a detailed response from one of our specialists soon.
+
+If you have any urgent questions, please don't hesitate to reach out.
+
+Best regards,
+Customer Support Team
+Cole's Portfolio Support
+
+---
+This is an automated response. Our team has been notified and will follow up personally.
+"""
+
+        # HTML version for customer (more polished)
+        customer_draft_html = draft_response.replace('\n', '<br>')
+        customer_body_html = f"""
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #007bff;">
+        <h3 style="color: #007bff; margin: 0;">Thank you for contacting our support team!</h3>
+    </div>
+    
+    <div style="background-color: white; padding: 20px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #e9ecef;">
+        {customer_draft_html}
+    </div>
+    
+    <div style="background-color: #e8f5e8; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <p style="margin: 0;"><strong>📋 Status Update:</strong> We have received your message and our team is already working on your <strong>{classification['category']}</strong> inquiry. You can expect a detailed response from one of our specialists soon.</p>
+    </div>
+    
+    <div style="background-color: #fff3cd; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <p style="margin: 0;"><strong>💬 Need immediate assistance?</strong> If you have any urgent questions, please don't hesitate to reach out.</p>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border-top: 3px solid #007bff;">
+        <p style="margin: 0; font-weight: bold; color: #007bff;">Best regards,<br>Customer Support Team<br>Cole's Portfolio Support</p>
+        <p style="margin: 10px 0 0 0; font-size: 12px; color: #6c757d;">This is an automated response. Our team has been notified and will follow up personally.</p>
+    </div>
+</div>
+"""
+        
+        # Send auto-reply to customer
+        message_id = await adapter.send_email(
+            to=[EmailAddress(email=original_email['from'])],
+            subject=customer_subject,
+            body_text=customer_body_text,
+            body_html=customer_body_html,
+            reply_to_id=None,
+            headers={
+                "X-Auto-Reply": "true",
+                "X-Classification": classification['category'],
+                "In-Reply-To": original_email.get('message_id', ''),
+                "References": original_email.get('message_id', '')
+            }
+        )
+        
+        await adapter.disconnect()
+        
+        logger.info(f"📧 Auto-reply sent to customer: {original_email['from']}")
+        
+        return {
+            "status": "success", 
+            "message_id": message_id,
+            "sent_to": original_email['from'],
+            "type": "auto_reply"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error sending auto-reply to customer: {e}")
+        return {"status": "error", "error": str(e)}
+
+async def forward_email_with_draft(original_email: dict, forward_to: str, classification: dict, draft_response: str) -> dict:
+    """Forward the original email with AI-generated draft response."""
+    try:
+        # Import your existing Mailgun adapter
+        from src.infrastructure.config.settings import get_settings
+        from src.adapters.email.mailgun import MailgunAdapter
+        from src.core.interfaces.email_provider import EmailProviderConfig, EmailProvider, EmailAddress
+        
+        # Get Mailgun configuration (force reload to pick up new domain)
+        from src.infrastructure.config.settings import reload_settings
+        settings = reload_settings()
+        email_config = settings.get_email_config("mailgun")
+        
+        config = EmailProviderConfig(
+            provider=EmailProvider.MAILGUN,
+            credentials=email_config["credentials"],
+            polling_interval=60,
+            batch_size=50,
+        )
+        
+        adapter = MailgunAdapter(config)
+        await adapter.connect()
+        
+        # Create forwarded email content
+        forwarded_subject = f"[{classification['category'].upper()}] {original_email['subject']}"
+        
+        # Plain text version
+        forwarded_body_text = f"""
+🤖 AI EMAIL ROUTER - FORWARDED MESSAGE
+
+📊 CLASSIFICATION: {classification['category']} (confidence: {classification['confidence']:.2f})
+🎯 REASONING: {classification['reasoning']}
+
+📧 ORIGINAL MESSAGE:
+From: {original_email['from']}
+To: {original_email['to']}
+Subject: {original_email['subject']}
+
+{original_email['stripped_text'] or original_email['body_text']}
+
+---
+
+🤖 SUGGESTED RESPONSE DRAFT:
+
+{draft_response}
+
+---
+This message was automatically classified and routed by the AI Email Router system.
+Reply to this email to respond to the original sender.
+"""
+
+        # HTML version with bold formatting (fix f-string syntax)
+        draft_response_html = draft_response.replace('\n', '<br>')
+        forwarded_body_html = f"""
+<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h2 style="color: #2c3e50; margin: 0;">🤖 AI EMAIL ROUTER - FORWARDED MESSAGE</h2>
+    </div>
+    
+    <div style="background-color: #e8f5e8; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <p><strong>📊 CLASSIFICATION:</strong> <span style="color: #27ae60; font-weight: bold;">{classification['category']}</span> (confidence: <strong>{classification['confidence']:.2f}</strong>)</p>
+        <p><strong>🎯 REASONING:</strong> {classification['reasoning']}</p>
+    </div>
+    
+    <div style="background-color: #fff3cd; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <h3 style="color: #856404; margin-top: 0;">📧 ORIGINAL MESSAGE:</h3>
+        <p><strong>From:</strong> {original_email['from']}</p>
+        <p><strong>To:</strong> {original_email['to']}</p>
+        <p><strong>Subject:</strong> {original_email['subject']}</p>
+        <div style="background-color: white; padding: 15px; border-left: 4px solid #ffc107; margin-top: 10px;">
+            <p>{original_email['stripped_text'] or original_email['body_text']}</p>
+        </div>
+    </div>
+    
+    <hr style="border: none; border-top: 2px solid #dee2e6; margin: 30px 0;">
+    
+    <div style="background-color: #d1ecf1; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <h3 style="color: #0c5460; margin-top: 0;">🤖 SUGGESTED RESPONSE DRAFT:</h3>
+        <div style="background-color: white; padding: 15px; border-left: 4px solid #17a2b8; margin-top: 10px;">
+            {draft_response_html}
+        </div>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; color: #6c757d; font-size: 12px;">
+        <p><strong>This message was automatically classified and routed by the AI Email Router system.</strong><br>
+        Reply to this email to respond to the original sender.</p>
+    </div>
+</div>
+"""
+        
+        # Send the forwarded email with both text and HTML versions
+        message_id = await adapter.send_email(
+            to=[EmailAddress(email=forward_to)],
+            subject=forwarded_subject,
+            body_text=forwarded_body_text,
+            body_html=forwarded_body_html,
+            reply_to_id=None,
+            headers={
+                "X-Original-From": original_email['from'],
+                "X-Classification": classification['category'],
+                "X-Confidence": str(classification['confidence'])
+            }
+        )
+        
+        await adapter.disconnect()
+        
+        return {
+            "status": "success",
+            "message_id": message_id,
+            "forwarded_to": forward_to,
+            "classification": classification['category']
+        }
+        
+    except Exception as e:
+        logger.error(f"Error forwarding email: {e}")
+        return {"status": "error", "error": str(e)}
 
 @app.get("/status")
 async def get_system_status():

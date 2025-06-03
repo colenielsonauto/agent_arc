@@ -6,7 +6,8 @@ validation, environment variable support, and secret handling.
 """
 
 from typing import Dict, List, Optional, Any
-from pydantic import BaseSettings, Field, validator, SecretStr
+from pydantic import Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings
 from pathlib import Path
 import os
 
@@ -38,8 +39,7 @@ class LLMSettings(BaseSettings):
     max_tokens: Optional[int] = Field(2000, env="LLM_MAX_TOKENS")
     timeout: int = Field(30, env="LLM_TIMEOUT")
     
-    class Config:
-        case_sensitive = False
+    model_config = {"extra": "allow", "case_sensitive": False}
 
 
 class EmailSettings(BaseSettings):
@@ -68,11 +68,11 @@ class EmailSettings(BaseSettings):
     
     # Mailgun
     mailgun_api_key: Optional[SecretStr] = Field(
-        SecretStr("your-mailgun-api-key-here"),
+        None,
         env="MAILGUN_API_KEY"
     )
     mailgun_domain: Optional[str] = Field(
-        "sandboxeadaeacc0bf24d2b9e19f6eec262f504.mailgun.org",
+        "mail.colesportfolio.com",
         env="MAILGUN_DOMAIN"
     )
     mailgun_base_url: str = Field(
@@ -84,7 +84,8 @@ class EmailSettings(BaseSettings):
     polling_interval: int = Field(60, env="EMAIL_POLLING_INTERVAL")
     batch_size: int = Field(50, env="EMAIL_BATCH_SIZE")
     
-    @validator("gmail_credentials_path", "gmail_token_path")
+    @field_validator("gmail_credentials_path", "gmail_token_path")
+    @classmethod
     def validate_path(cls, v):
         """Ensure paths exist or can be created."""
         path = Path(v)
@@ -116,8 +117,7 @@ class MemorySettings(BaseSettings):
     embedding_dimension: int = Field(1536, env="EMBEDDING_DIMENSION")
     default_ttl: Optional[int] = Field(86400, env="MEMORY_DEFAULT_TTL")  # 24 hours
     
-    class Config:
-        case_sensitive = False
+    model_config = {"extra": "allow", "case_sensitive": False}
 
 
 class AnalyticsSettings(BaseSettings):
@@ -145,8 +145,7 @@ class AnalyticsSettings(BaseSettings):
     enable_metrics: bool = Field(True, env="ENABLE_METRICS")
     sampling_rate: float = Field(1.0, ge=0.0, le=1.0, env="SAMPLING_RATE")
     
-    class Config:
-        case_sensitive = False
+    model_config = {"extra": "allow", "case_sensitive": False}
 
 
 class SecuritySettings(BaseSettings):
@@ -168,8 +167,7 @@ class SecuritySettings(BaseSettings):
     # API Keys
     api_key_header: str = Field("X-API-Key", env="API_KEY_HEADER")
     
-    class Config:
-        case_sensitive = False
+    model_config = {"extra": "allow", "case_sensitive": False}
 
 
 class ApplicationSettings(BaseSettings):
@@ -200,7 +198,8 @@ class ApplicationSettings(BaseSettings):
     max_retries: int = Field(3, env="MAX_RETRIES")
     retry_delay: int = Field(5, env="RETRY_DELAY")  # seconds
     
-    @validator("environment")
+    @field_validator("environment")
+    @classmethod
     def validate_environment(cls, v):
         """Validate environment name."""
         valid = ["development", "staging", "production"]
@@ -208,10 +207,12 @@ class ApplicationSettings(BaseSettings):
             raise ValueError(f"Environment must be one of: {valid}")
         return v
     
-    class Config:
-        case_sensitive = False
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = {
+        "extra": "allow", 
+        "case_sensitive": False,
+        "env_file": ".env",
+        "env_file_encoding": "utf-8"
+    }
 
 
 class Settings(BaseSettings):
@@ -231,10 +232,12 @@ class Settings(BaseSettings):
     enable_multi_agent: bool = Field(False, env="ENABLE_MULTI_AGENT")
     enable_webhooks: bool = Field(True, env="ENABLE_WEBHOOKS")
     
-    class Config:
-        case_sensitive = False
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = {
+        "extra": "allow", 
+        "case_sensitive": False,
+        "env_file": ".env",
+        "env_file_encoding": "utf-8"
+    }
     
     @classmethod
     def load(cls) -> "Settings":
@@ -321,4 +324,10 @@ def get_settings() -> Settings:
     global _settings
     if _settings is None:
         _settings = Settings.load()
+    return _settings
+
+def reload_settings() -> Settings:
+    """Force reload settings from environment."""
+    global _settings
+    _settings = Settings.load()
     return _settings 
