@@ -6,7 +6,7 @@ Webhook handlers for incoming emails.
 import logging
 from fastapi import APIRouter, Request, BackgroundTasks
 from ..services.classifier import classify_email
-from ..services.email_composer import generate_response_draft
+from ..services.email_composer import generate_customer_acknowledgment, generate_team_analysis
 from ..services.email_sender import send_auto_reply, forward_to_team
 from ..utils.config import get_config
 
@@ -79,16 +79,20 @@ async def process_email_pipeline(email_data: dict):
         # Step 2: Determine routing
         forward_to = ROUTING_RULES.get(classification['category'], ROUTING_RULES['general'])
         
-        # Step 3: Generate AI response draft
-        draft_response = await generate_response_draft(email_data, classification)
+        # Step 3: Generate SEPARATE responses
+        # Customer gets brief acknowledgment
+        customer_acknowledgment = await generate_customer_acknowledgment(email_data, classification)
         
-        # Step 4: Send auto-reply to customer
-        await send_auto_reply(email_data, classification, draft_response)
+        # Team gets detailed analysis
+        team_analysis = await generate_team_analysis(email_data, classification)
         
-        # Step 5: Forward to team with draft
-        await forward_to_team(email_data, forward_to, classification, draft_response)
+        # Step 4: Send brief acknowledgment to customer
+        await send_auto_reply(email_data, classification, customer_acknowledgment)
         
-        logger.info(f"✅ Email processed: auto-replied + forwarded to {forward_to}")
+        # Step 5: Forward to team with detailed analysis
+        await forward_to_team(email_data, forward_to, classification, team_analysis)
+        
+        logger.info(f"✅ Email processed: acknowledgment sent + detailed analysis forwarded to {forward_to}")
         
     except Exception as e:
         logger.error(f"❌ Email pipeline failed: {e}") 

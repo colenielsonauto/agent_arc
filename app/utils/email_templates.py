@@ -3,6 +3,12 @@ Email template generation for customer and team communications.
 📧 Creates beautiful HTML and text templates.
 """
 
+def generate_ticket_id() -> str:
+    """Generate a simple ticket ID"""
+    import random
+    import string
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
 def create_customer_template(draft_response: str, classification: dict) -> tuple[str, str]:
     """
     Create customer-facing auto-reply (text + HTML).
@@ -17,49 +23,77 @@ def create_customer_template(draft_response: str, classification: dict) -> tuple
     
     category = classification.get('category', 'general')
     
+    # Determine response time based on category
+    response_times = {
+        "support": "within 4 hours",
+        "billing": "within 24 hours", 
+        "sales": "within 2 hours",
+        "general": "within 24 hours"
+    }
+    response_time = response_times.get(category, "within 24 hours")
+    ticket_id = generate_ticket_id()
+    
     # Plain text version
     text_body = f"""
-Thank you for contacting our support team!
-
 {draft_response}
 
-We've received your {category} inquiry and our team is already working on it. 
-You can expect a detailed response from one of our specialists soon.
-
-If you have any urgent questions, please don't hesitate to reach out.
+Expected Response Time: {response_time}
 
 Best regards,
-AI Email Router Support Team
+Support Team
 
 ---
-This is an automated response. Our team has been notified and will follow up personally.
+Ticket #: {ticket_id}
+This is an automated acknowledgment. A team member will follow up personally.
 """
 
-    # HTML version  
-    draft_html = draft_response.replace('\n', '<br>')
+    # Clean, modern HTML version
     html_body = f"""
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #007bff;">
-        <h3 style="color: #007bff; margin: 0;">Thank you for contacting our support team!</h3>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thank You for Contacting Us</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8f9fa;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Thank You for Contacting Us</h1>
+        </div>
+        
+        <!-- Main Content -->
+        <div style="padding: 40px 30px;">
+            <div style="background-color: #f8f9ff; border-left: 4px solid #667eea; padding: 20px; margin-bottom: 30px; border-radius: 0 6px 6px 0;">
+                <p style="margin: 0; color: #2d3748; line-height: 1.6; font-size: 16px;">{draft_response}</p>
+            </div>
+            
+            <div style="background-color: #f0f9ff; border: 1px solid #e0f2fe; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <span style="color: #0369a1; font-size: 18px; margin-right: 8px;">⏱️</span>
+                    <strong style="color: #0369a1;">Expected Response Time:</strong>
+                </div>
+                <p style="margin: 0; color: #075985; font-size: 16px; font-weight: 600;">{response_time}</p>
+            </div>
+            
+            <div style="text-align: center; color: #64748b; font-size: 14px; line-height: 1.5;">
+                <p>Ticket #: <strong>{ticket_id}</strong></p>
+                <p>Best regards,<br><strong>Support Team</strong></p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0; color: #64748b; font-size: 12px;">
+                🤖 This is an automated acknowledgment. A team member will follow up personally.
+            </p>
+        </div>
+        
     </div>
-    
-    <div style="background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 6px; margin-bottom: 20px;">
-        {draft_html}
-    </div>
-    
-    <div style="background: #e8f5e8; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <p style="margin: 0;"><strong>📋 Status:</strong> We've received your <strong>{category}</strong> inquiry and our team is working on it.</p>
-    </div>
-    
-    <div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <p style="margin: 0;"><strong>⚡ Need immediate assistance?</strong> If you have any urgent questions, please don't hesitate to reach out.</p>
-    </div>
-    
-    <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border-top: 3px solid #007bff;">
-        <p style="margin: 0; font-weight: bold; color: #007bff;">Best regards,<br>AI Email Router Support Team</p>
-        <p style="margin: 10px 0 0 0; font-size: 12px; color: #6c757d;">🤖 Automated response • Team notified • Personal follow-up coming</p>
-    </div>
-</div>
+</body>
+</html>
 """
     
     return text_body, html_body
@@ -106,48 +140,78 @@ Reply to this email to respond to the original sender.
 The customer has already received an automated acknowledgment.
 """
 
-    # HTML version
-    draft_html = draft_response.replace('\n', '<br>')
+    # Enhanced HTML with better UX
+    analysis_html = draft_response.replace('\n', '<br>')
     email_body_html = (email_data['stripped_text'] or email_data['body_text']).replace('\n', '<br>')
     
     html_body = f"""
-<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745;">
-        <h2 style="color: #2c3e50; margin: 0;">🤖 AI EMAIL ROUTER - FORWARDED MESSAGE</h2>
-    </div>
-    
-    <div style="background: #e8f5e8; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <p style="margin: 0;"><strong>📋 CLASSIFICATION:</strong> <span style="color: #27ae60; font-weight: bold; text-transform: uppercase;">{category}</span> (confidence: <strong>{confidence:.2f}</strong>)</p>
-        <p style="margin: 10px 0 0 0;"><strong>💭 REASONING:</strong> {reasoning}</p>
-    </div>
-    
-    <div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <h3 style="color: #856404; margin-top: 0;">📧 ORIGINAL MESSAGE:</h3>
-        <p><strong>From:</strong> {email_data['from']}</p>
-        <p><strong>To:</strong> {email_data.get('to', 'N/A')}</p>
-        <p><strong>Subject:</strong> {email_data['subject']}</p>
-        <div style="background: white; padding: 15px; border-left: 4px solid #ffc107; margin-top: 10px; border-radius: 4px;">
-            <p style="margin: 0;">{email_body_html}</p>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Email Analysis</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8f9fa;">
+    <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff;">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 25px; color: white;">
+            <h1 style="margin: 0; font-size: 22px; font-weight: 600;">🤖 AI Email Analysis</h1>
+            <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">Automated classification and analysis</p>
         </div>
-    </div>
-    
-    <hr style="border: none; border-top: 2px solid #dee2e6; margin: 30px 0;">
-    
-    <div style="background: #d1ecf1; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <h3 style="color: #0c5460; margin-top: 0;">✍️ SUGGESTED RESPONSE DRAFT:</h3>
-        <div style="background: white; padding: 15px; border-left: 4px solid #17a2b8; border-radius: 4px;">
-            <p style="margin: 0;">{draft_html}</p>
+        
+        <!-- Classification Card -->
+        <div style="margin: 20px; background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px;">
+            <div style="margin-bottom: 15px;">
+                <span style="font-size: 24px; margin-right: 10px;">📋</span>
+                <span style="color: #166534; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; font-size: 18px;">{category}</span>
+                <span style="margin-left: 15px; background: #16a34a; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">{confidence:.0%} CONFIDENT</span>
+            </div>
+            <p style="margin: 0; color: #166534; font-weight: 500;">{reasoning}</p>
         </div>
+        
+        <!-- Original Email Card -->
+        <div style="margin: 20px; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div style="background: #f9fafb; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+                <h3 style="margin: 0; color: #374151; font-size: 16px;">📧 Original Message</h3>
+            </div>
+            <div style="padding: 20px;">
+                <div style="margin-bottom: 15px;">
+                    <strong style="color: #374151;">From:</strong> <span style="color: #6b7280;">{email_data['from']}</span><br>
+                    <strong style="color: #374151;">Subject:</strong> <span style="color: #6b7280;">{email_data['subject']}</span>
+                </div>
+                <div style="background: #f8fafc; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 0 6px 6px 0;">
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6;">{email_body_html}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AI Analysis Card -->
+        <div style="margin: 20px; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 15px; border-bottom: 1px solid #93c5fd;">
+                <h3 style="margin: 0; color: #1e40af; font-size: 16px;">🔍 AI Analysis & Recommendations</h3>
+            </div>
+            <div style="padding: 20px;">
+                <div style="color: #1e293b; line-height: 1.7;">{analysis_html}</div>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div style="margin: 20px; text-align: center; padding: 20px;">
+            <p style="color: #6b7280; margin-bottom: 15px; font-size: 14px;">
+                ✅ Customer has already received an automated acknowledgment
+            </p>
+            <div style="background: #f0f9ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 15px; margin-top: 20px;">
+                <p style="margin: 0; color: #3730a3; font-weight: 600;">
+                    📧 Reply to this email to respond directly to the customer
+                </p>
+            </div>
+        </div>
+        
     </div>
-    
-    <div style="background: #d4edda; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <p style="margin: 0; color: #155724;"><strong>✅ Customer Status:</strong> Automated acknowledgment already sent</p>
-    </div>
-    
-    <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; text-align: center; color: #6c757d; font-size: 12px;">
-        <p style="margin: 0;"><strong>📧 Reply to this email to respond to the original sender.</strong></p>
-    </div>
-</div>
+</body>
+</html>
 """
     
     return text_body, html_body 
