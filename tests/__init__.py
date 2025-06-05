@@ -1,1 +1,3 @@
-"""Test suite for Email Router.""" 
+"""
+Essential tests for AI Email Router MVP.
+""" 

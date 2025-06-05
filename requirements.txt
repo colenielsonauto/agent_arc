@@ -1,0 +1,23 @@
+# =============================================================================
+# AI EMAIL ROUTER - MINIMAL PRODUCTION DEPENDENCIES
+# =============================================================================
+
+# Core FastAPI
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# HTTP client for API calls (Anthropic + Mailgun)
+httpx==0.25.0
+
+# Environment management
+python-dotenv==1.0.0
+
+# Production server
+gunicorn==21.2.0
+
+# Data validation
+pydantic==2.5.0
+
+# Testing (for development)
+pytest==7.4.0 

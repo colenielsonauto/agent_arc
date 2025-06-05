@@ -1,1 +1,0 @@
-Draft a concise, professional reply to the sender explaining next steps. Use bullet points for multiple action items if needed. 
