@@ -1,0 +1,49 @@
+# =============================================================================
+# CLIENT CONFIGURATION TEMPLATE
+# Copy this template when onboarding new clients
+# =============================================================================
+
+client:
+  id: "client-xxx-company-name"      # kebab-case unique identifier
+  name: "Company Name Inc."          # Display name
+  industry: "Technology"             # Industry sector
+  timezone: "America/New_York"       # IANA timezone identifier
+  business_hours: "9-17"             # Business hours (24h format)
+  created_at: "2024-01-01T00:00:00Z" # ISO 8601 timestamp
+  status: "active"                   # active, inactive, trial
+
+# Email domains handled by this client
+domains:
+  primary: "company.com"             # Main company domain
+  support: "support@company.com"     # Support email domain
+  mailgun: "mg.company.com"          # Mailgun subdomain
+
+# Company branding and identity
+branding:
+  company_name: "Company Name Inc."
+  primary_color: "#667eea"           # Primary brand color (hex)
+  secondary_color: "#764ba2"         # Secondary brand color (hex)
+  logo_url: "https://company.com/logo.png"
+  email_signature: "Company Support Team"
+  footer_text: "© 2024 Company Name Inc. All rights reserved."
+
+# Response time commitments (SLA)
+response_times:
+  support: "within 4 hours"          # Technical support
+  billing: "within 24 hours"         # Billing inquiries
+  sales: "within 2 hours"            # Sales inquiries
+  general: "within 24 hours"         # General inquiries
+
+# Contact information
+contacts:
+  primary_contact: "admin@company.com"
+  escalation_contact: "manager@company.com"
+  billing_contact: "billing@company.com"
+
+# Feature flags and settings
+settings:
+  auto_reply_enabled: true           # Enable automatic replies
+  team_forwarding_enabled: true     # Forward to team members
+  ai_classification_enabled: true   # Use AI for classification
+  escalation_enabled: true          # Auto-escalate based on rules
+  monitoring_enabled: true          # Enable monitoring/analytics 

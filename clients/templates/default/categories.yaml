@@ -1,0 +1,78 @@
+# =============================================================================
+# EMAIL CLASSIFICATION CATEGORIES TEMPLATE
+# Define categories for AI email classification
+# =============================================================================
+
+# Primary categories for email classification
+categories:
+  support:
+    name: "Technical Support"
+    description: "Technical problems, how-to questions, product issues"
+    priority: "high"
+    keywords: ["help", "problem", "issue", "error", "bug", "broken", "not working"]
+    confidence_threshold: 0.8
+    
+  billing:
+    name: "Billing & Payments"
+    description: "Payment issues, invoices, account billing, refunds"
+    priority: "high"
+    keywords: ["invoice", "payment", "billing", "charge", "refund", "receipt"]
+    confidence_threshold: 0.85
+    
+  sales:
+    name: "Sales Inquiries"
+    description: "Pricing inquiries, product demos, new business"
+    priority: "medium"
+    keywords: ["pricing", "demo", "quote", "purchase", "buy", "trial"]
+    confidence_threshold: 0.75
+    
+  general:
+    name: "General Inquiries"
+    description: "General questions, feedback, other inquiries"
+    priority: "low"
+    keywords: ["question", "inquiry", "feedback", "suggestion"]
+    confidence_threshold: 0.6
+
+# Additional specialized categories (optional)
+specialized_categories:
+  technical:
+    name: "Advanced Technical"
+    description: "Complex technical issues requiring specialist knowledge"
+    priority: "high"
+    keywords: ["api", "integration", "database", "server", "configuration"]
+    confidence_threshold: 0.9
+    
+  complaint:
+    name: "Complaints"
+    description: "Customer complaints and dissatisfaction"
+    priority: "urgent"
+    keywords: ["complaint", "dissatisfied", "unhappy", "terrible", "awful"]
+    confidence_threshold: 0.8
+    
+  feature_request:
+    name: "Feature Requests"
+    description: "Product feature requests and suggestions"
+    priority: "low"
+    keywords: ["feature", "request", "suggestion", "improvement", "enhancement"]
+    confidence_threshold: 0.7
+
+# Priority levels and their meanings
+priority_levels:
+  urgent: 
+    response_time: "within 1 hour"
+    escalate_immediately: true
+  high:
+    response_time: "within 4 hours"
+    escalate_after: 2  # hours
+  medium:
+    response_time: "within 8 hours"
+    escalate_after: 4  # hours
+  low:
+    response_time: "within 24 hours"
+    escalate_after: 8  # hours
+
+# Fallback configuration
+fallback:
+  default_category: "general"
+  minimum_confidence: 0.5
+  unknown_threshold: 0.3  # Below this, classify as "general" 

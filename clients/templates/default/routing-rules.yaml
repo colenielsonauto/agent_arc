@@ -1,0 +1,56 @@
+# =============================================================================
+# EMAIL ROUTING RULES TEMPLATE
+# Define how emails are routed to team members based on classification
+# =============================================================================
+
+# Primary routing rules: category -> team member email
+routing:
+  support: "support@company.com"
+  billing: "billing@company.com"
+  sales: "sales@company.com"
+  technical: "support@company.com"
+  complaint: "manager@company.com"
+  general: "info@company.com"
+
+# Escalation rules: when to escalate and to whom
+escalation:
+  # Time-based escalation (if no response within X hours)
+  time_based:
+    support: 
+      - hours: 2
+        escalate_to: "manager@company.com"
+    billing:
+      - hours: 4
+        escalate_to: "billing-manager@company.com"
+    sales:
+      - hours: 1
+        escalate_to: "sales-manager@company.com"
+  
+  # Keyword-based escalation (immediate escalation)
+  keyword_based:
+    urgent: "manager@company.com"
+    vip: "ceo@company.com"
+    refund: "billing-manager@company.com"
+    cancellation: "retention@company.com"
+    legal: "legal@company.com"
+
+# Backup routing (if primary contact unavailable)
+backup_routing:
+  support: "manager@company.com"
+  billing: "admin@company.com"
+  sales: "manager@company.com"
+  general: "admin@company.com"
+
+# Special rules
+special_rules:
+  # VIP customers (route to priority queue)
+  vip_domains:
+    - "bigclient.com"
+    - "enterprise-customer.com"
+  vip_route_to: "vip-support@company.com"
+  
+  # Out of hours routing
+  after_hours_route_to: "oncall@company.com"
+  
+  # Weekend routing
+  weekend_route_to: "weekend-support@company.com" 

@@ -1,0 +1,85 @@
+# =============================================================================
+# FALLBACK RESPONSES TEMPLATE
+# Used when AI services are unavailable or fail
+# =============================================================================
+
+# Customer acknowledgment fallbacks (brief, professional)
+customer_acknowledgments:
+  support: |
+    Thank you for contacting our support team. We've received your technical inquiry 
+    and our team will respond within 4 hours during business hours.
+    
+    Best regards,
+    {{client.branding.email_signature}}
+    
+  billing: |
+    Thank you for your billing inquiry. Our accounting team has been notified 
+    and will review your request within 24 hours.
+    
+    Best regards,
+    {{client.branding.email_signature}}
+    
+  sales: |
+    Thank you for your interest in our services. Our sales team will contact 
+    you within 2 hours during business hours to discuss your needs.
+    
+    Best regards,
+    {{client.branding.email_signature}}
+    
+  general: |
+    Thank you for contacting {{client.branding.company_name}}. We've received 
+    your message and will respond within 24 hours.
+    
+    Best regards,
+    {{client.branding.email_signature}}
+    
+  urgent: |
+    Thank you for contacting us. Your message has been marked as urgent and 
+    forwarded to our priority support team for immediate attention.
+    
+    Best regards,
+    {{client.branding.email_signature}}
+
+# Team analysis fallbacks (when AI analysis fails)
+team_analysis:
+  support: |
+    Email classified as SUPPORT inquiry (fallback classification).
+    Please review the original message and provide appropriate technical assistance.
+    Response time target: within 4 hours.
+    
+  billing: |
+    Email classified as BILLING inquiry (fallback classification).
+    Please review the original message for payment/billing related issues.
+    Response time target: within 24 hours.
+    
+  sales: |
+    Email classified as SALES inquiry (fallback classification).
+    Please review the original message for potential business opportunity.
+    Response time target: within 2 hours.
+    
+  general: |
+    Email classified as GENERAL inquiry (fallback classification).
+    Please review the original message and respond accordingly.
+    Response time target: within 24 hours.
+
+# Error messages for internal use
+error_messages:
+  ai_service_down: |
+    AI classification service is currently unavailable. 
+    Using fallback classification rules.
+    
+  prompt_template_error: |
+    Error loading AI prompt template. 
+    Using default fallback responses.
+    
+  config_load_error: |
+    Error loading client configuration. 
+    Using system defaults.
+
+# Default classification when AI fails
+default_classification:
+  category: "general"
+  confidence: 0.5
+  reasoning: "Fallback classification - AI service unavailable"
+  priority: "medium"
+  suggested_actions: ["manual_review", "standard_response"] 

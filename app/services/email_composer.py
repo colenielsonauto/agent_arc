@@ -1,224 +1,243 @@
 """
-AI-powered email response generation.
-✍️ Creates personalized response drafts using Claude 3.5 Sonnet.
+AI-powered email response generation with multi-tenant support.
+✍️ Creates personalized response drafts using client-specific AI prompts.
 """
 
 import logging
 import httpx
+from typing import Dict, Any, Optional
+
 from ..utils.config import get_config
+from ..services.client_manager import ClientManager, get_client_manager
+from ..services.template_engine import TemplateEngine
 
 logger = logging.getLogger(__name__)
 
-async def generate_customer_acknowledgment(email_data: dict, classification: dict) -> str:
+
+async def generate_customer_acknowledgment(email_data: Dict[str, Any], classification: Dict[str, Any],
+                                         client_id: Optional[str] = None) -> str:
     """
-    ✍️ Generate brief customer acknowledgment (NOT detailed response)
+    ✍️ Generate brief customer acknowledgment using client-specific templates.
+    
+    Args:
+        email_data: Email data from webhook
+        classification: Email classification result
+        client_id: Optional client ID (will be identified if not provided)
+        
+    Returns:
+        Generated acknowledgment text
+    """
+    try:
+        # Get client manager and template engine
+        client_manager = get_client_manager()
+        template_engine = TemplateEngine(client_manager)
+        
+        # Identify client if not provided
+        if not client_id:
+            client_id = client_manager.identify_client_by_email(
+                email_data.get('to') or email_data.get('recipient', '')
+            )
+        
+        if client_id:
+            # Use client-specific template
+            try:
+                prompt = template_engine.compose_acknowledgment_prompt(client_id, email_data, classification)
+                acknowledgment = await _call_ai_service(prompt)
+                
+                logger.info(f"✍️ Generated client-specific acknowledgment for {client_id}")
+                return acknowledgment
+                
+            except Exception as e:
+                logger.warning(f"Client-specific acknowledgment failed for {client_id}: {e}")
+                # Fall back to client's fallback response
+                return template_engine.get_fallback_response(
+                    client_id, 'customer_acknowledgments', classification.get('category', 'general')
+                )
+        else:
+            # No client identified, use generic acknowledgment
+            logger.warning("No client identified, using generic acknowledgment")
+            return await _generate_generic_acknowledgment(email_data, classification)
+            
+    except Exception as e:
+        logger.error(f"❌ Acknowledgment generation failed: {e}")
+        return _get_hard_fallback_acknowledgment(classification)
+
+
+async def generate_team_analysis(email_data: Dict[str, Any], classification: Dict[str, Any],
+                                client_id: Optional[str] = None) -> str:
+    """
+    ✍️ Generate detailed team analysis using client-specific templates.
+    
+    Args:
+        email_data: Email data from webhook
+        classification: Email classification result
+        client_id: Optional client ID (will be identified if not provided)
+        
+    Returns:
+        Generated team analysis text
+    """
+    try:
+        # Get client manager and template engine
+        client_manager = get_client_manager()
+        template_engine = TemplateEngine(client_manager)
+        
+        # Identify client if not provided
+        if not client_id:
+            client_id = client_manager.identify_client_by_email(
+                email_data.get('to') or email_data.get('recipient', '')
+            )
+        
+        if client_id:
+            # Use client-specific template
+            try:
+                prompt = template_engine.compose_team_analysis_prompt(client_id, email_data, classification)
+                analysis = await _call_ai_service(prompt)
+                
+                logger.info(f"✍️ Generated client-specific team analysis for {client_id}")
+                return analysis
+                
+            except Exception as e:
+                logger.warning(f"Client-specific team analysis failed for {client_id}: {e}")
+                # Fall back to client's fallback response
+                return template_engine.get_fallback_response(
+                    client_id, 'team_analysis', classification.get('category', 'general')
+                )
+        else:
+            # No client identified, use generic analysis
+            logger.warning("No client identified, using generic team analysis")
+            return await _generate_generic_team_analysis(email_data, classification)
+            
+    except Exception as e:
+        logger.error(f"❌ Team analysis generation failed: {e}")
+        return _get_hard_fallback_team_analysis(classification)
+
+
+async def _call_ai_service(prompt: str) -> str:
+    """
+    Call Anthropic Claude API with prompt.
+    
+    Args:
+        prompt: AI prompt to send
+        
+    Returns:
+        AI response text
+        
+    Raises:
+        Exception: If AI service call fails
     """
     config = get_config()
     
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": config.anthropic_api_key,
+                "anthropic-version": "2023-06-01"
+            },
+            json={
+                "model": config.anthropic_model,
+                "max_tokens": 400,  # Reasonable size for responses
+                "temperature": 0.3,  # Lower temperature for consistency
+                "messages": [{"role": "user", "content": prompt}]
+            },
+            timeout=30.0
+        )
+        
+        response.raise_for_status()
+        result = response.json()
+        
+        return result["content"][0]["text"].strip()
+
+
+async def _generate_generic_acknowledgment(email_data: Dict[str, Any], classification: Dict[str, Any]) -> str:
+    """Generate generic acknowledgment when no client is identified."""
+    category = classification.get('category', 'general')
+    
     prompt = f"""
-You are a professional customer service assistant. Generate a BRIEF acknowledgment email for a customer.
+Generate a brief professional acknowledgment for a {category} inquiry.
 
-Customer Email:
-Subject: {email_data['subject']}
-Message: {email_data['stripped_text'] or email_data['body_text']}
-Classification: {classification['category']}
+Email subject: {email_data.get('subject', '')}
 
-Generate a SHORT, professional acknowledgment that:
+Generate a SHORT acknowledgment that:
 1. Thanks them for contacting us
-2. Confirms we received their {classification['category']} inquiry  
-3. Mentions estimated response time (if relevant)
+2. Confirms we received their {category} inquiry
+3. Mentions we'll respond within 24 hours
 4. Stays under 150 words
-5. Does NOT provide solutions or detailed responses
-6. Only mentions specific details if you're 100% certain they're accurate
-
-Keep it brief, professional, and reassuring. This is just an acknowledgment, not the full response.
+5. Maintains a professional tone
 
 Acknowledgment:
 """
     
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": config.anthropic_api_key,
-                    "anthropic-version": "2023-06-01"
-                },
-                json={
-                    "model": config.anthropic_model,
-                    "max_tokens": 300,  # Shorter for acknowledgments
-                    "temperature": 0.3,  # Lower temperature for consistency
-                    "messages": [{"role": "user", "content": prompt}]
-                },
-                timeout=30.0
-            )
-            
-            response.raise_for_status()
-            result = response.json()
-            
-            acknowledgment = result["content"][0]["text"].strip()
-            logger.info(f"✍️ Generated customer acknowledgment ({len(acknowledgment)} characters)")
-            return acknowledgment
-            
+        return await _call_ai_service(prompt)
     except Exception as e:
-        logger.error(f"❌ Acknowledgment generation failed: {e}")
-        return _generate_fallback_acknowledgment(classification)
+        logger.error(f"Generic acknowledgment generation failed: {e}")
+        return _get_hard_fallback_acknowledgment(classification)
 
-async def generate_team_analysis(email_data: dict, classification: dict) -> str:
-    """
-    ✍️ Generate detailed team analysis and response suggestions
-    """
-    config = get_config()
+
+async def _generate_generic_team_analysis(email_data: Dict[str, Any], classification: Dict[str, Any]) -> str:
+    """Generate generic team analysis when no client is identified."""
+    category = classification.get('category', 'general')
+    confidence = classification.get('confidence', 0.5)
     
     prompt = f"""
-You are an expert customer service analyst. Analyze this email and provide detailed insights for the team member who will handle it.
+Analyze this email for the team member who will handle it.
 
-Customer Email:
-From: {email_data['from']}
-Subject: {email_data['subject']}
-Message: {email_data['stripped_text'] or email_data['body_text']}
+Email details:
+From: {email_data.get('from', '')}
+Subject: {email_data.get('subject', '')}
+Message: {email_data.get('stripped_text') or email_data.get('body_text', '')}
 
-Classification: {classification['category']} (confidence: {classification['confidence']})
+Classification: {category} (confidence: {confidence:.2f})
 
-Provide a comprehensive analysis including:
-1. Key issues or requests identified
-2. Customer sentiment and urgency level
+Provide analysis including:
+1. Key issues identified
+2. Customer sentiment
 3. Suggested response approach
-4. Any red flags or special considerations
-5. Recommended next steps
-6. Draft response suggestions (if applicable)
-
-Make this detailed and actionable for the team member.
+4. Recommended next steps
 
 Team Analysis:
 """
     
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": config.anthropic_api_key,
-                    "anthropic-version": "2023-06-01"
-                },
-                json={
-                    "model": config.anthropic_model,
-                    "max_tokens": 800,  # Longer for detailed analysis
-                    "temperature": 0.4,
-                    "messages": [{"role": "user", "content": prompt}]
-                },
-                timeout=30.0
-            )
-            
-            response.raise_for_status()
-            result = response.json()
-            
-            analysis = result["content"][0]["text"].strip()
-            logger.info(f"✍️ Generated team analysis ({len(analysis)} characters)")
-            return analysis
-            
+        return await _call_ai_service(prompt)
     except Exception as e:
-        logger.error(f"❌ Team analysis generation failed: {e}")
-        return _generate_fallback_team_analysis(classification)
+        logger.error(f"Generic team analysis generation failed: {e}")
+        return _get_hard_fallback_team_analysis(classification)
 
-def _generate_fallback_acknowledgment(classification: dict) -> str:
-    """Generate simple fallback acknowledgment."""
+
+def _get_hard_fallback_acknowledgment(classification: Dict[str, Any]) -> str:
+    """Get hard-coded fallback acknowledgment when all else fails."""
     category = classification.get('category', 'general')
     
     fallbacks = {
-        "support": "Thank you for contacting our support team. We've received your technical inquiry and our team will respond within 24 hours.",
-        "billing": "Thank you for your billing inquiry. Our accounting team will review your request within 24 hours.",
-        "sales": "Thank you for your interest in our services. Our sales team will contact you within 24 hours.",
+        "support": "Thank you for contacting our support team. We've received your technical inquiry and our team will respond within 4 hours during business hours.",
+        "billing": "Thank you for your billing inquiry. Our accounting team has been notified and will review your request within 24 hours.",
+        "sales": "Thank you for your interest in our services. Our sales team will contact you within 2 hours during business hours to discuss your needs.",
         "general": "Thank you for contacting us. We've received your message and will respond within 24 hours."
     }
     
     return fallbacks.get(category, fallbacks["general"])
 
-def _generate_fallback_team_analysis(classification: dict) -> str:
-    """Generate simple fallback team analysis."""
-    return f"Email classified as {classification.get('category', 'general')}. Please review the original message and respond accordingly."
 
-async def generate_response_draft(email_data: dict, classification: dict) -> str:
+def _get_hard_fallback_team_analysis(classification: Dict[str, Any]) -> str:
+    """Get hard-coded fallback team analysis when all else fails."""
+    category = classification.get('category', 'general')
+    return f"Email classified as {category.upper()} inquiry (fallback classification). Please review the original message and respond accordingly."
+
+
+# Legacy function for backward compatibility
+async def generate_response_draft(email_data: Dict[str, Any], classification: Dict[str, Any]) -> str:
     """
-    ✍️ Generate personalized response draft using Claude 3.5 Sonnet
+    Legacy function - use generate_team_analysis instead.
     
     Args:
         email_data: Original email data from Mailgun webhook
         classification: AI classification result
         
     Returns:
-        Personalized response draft string
+        Generated response draft
     """
-    
-    config = get_config()
-    
-    prompt = f"""
-You are a professional customer service assistant. Generate a helpful, personalized draft response.
-
-Original Email:
-From: {email_data['from']}
-Subject: {email_data['subject']}
-Message: {email_data['stripped_text'] or email_data['body_text']}
-
-Classification: {classification['category']} (confidence: {classification['confidence']})
-Reasoning: {classification.get('reasoning', 'No reasoning provided')}
-
-Generate a professional response that:
-1. Acknowledges their {classification['category']} inquiry
-2. Shows understanding of their specific concern
-3. Provides helpful next steps or information
-4. Maintains a friendly, professional tone
-5. Ends with a professional closing
-
-Keep it concise but helpful. Make it feel personal, not robotic.
-
-Draft Response:
-"""
-    
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": config.anthropic_api_key,
-                    "anthropic-version": "2023-06-01"
-                },
-                json={
-                    "model": config.anthropic_model,
-                    "max_tokens": 500,
-                    "temperature": 0.7,  # Higher temperature for more creative responses
-                    "messages": [{"role": "user", "content": prompt}]
-                },
-                timeout=30.0
-            )
-            
-            response.raise_for_status()
-            result = response.json()
-            
-            draft_response = result["content"][0]["text"].strip()
-            
-            logger.info(f"✍️ Generated response draft ({len(draft_response)} characters)")
-            return draft_response
-            
-    except Exception as e:
-        logger.error(f"❌ Response generation failed: {e}")
-        
-        # Fallback response
-        return _generate_fallback_response(classification)
-
-def _generate_fallback_response(classification: dict) -> str:
-    """Generate a simple fallback response when AI fails."""
-    
-    category = classification.get('category', 'general')
-    
-    fallback_responses = {
-        "support": "Thank you for contacting our support team. We've received your technical inquiry and will respond with assistance within 24 hours.",
-        "billing": "Thank you for your billing inquiry. Our accounting team has been notified and will review your account within 24 hours.", 
-        "sales": "Thank you for your interest in our services. Our sales team will reach out to you within 24 hours to discuss your needs.",
-        "general": "Thank you for contacting us. We've received your message and will respond within 24 hours."
-    }
-    
-    return fallback_responses.get(category, fallback_responses["general"]) 
+    logger.warning("generate_response_draft is deprecated, use generate_team_analysis")
+    return await generate_team_analysis(email_data, classification) 

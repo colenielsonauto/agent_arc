@@ -1,0 +1,49 @@
+# =============================================================================
+# CLIENT CONFIGURATION - COLE NIELSON (MIGRATED FROM HARD-CODED VALUES)
+# First client migrated from the original single-client system
+# =============================================================================
+
+client:
+  id: "client-001-cole-nielson"
+  name: "Cole Nielson Email Router"
+  industry: "Technology"
+  timezone: "America/Mountain"  # Boise, Idaho timezone
+  business_hours: "9-17"
+  created_at: "2024-06-09T17:00:00Z"
+  status: "active"
+
+# Email domains (extracted from environment variables)
+domains:
+  primary: "colenielson.dev"  # Inferred from email addresses
+  support: "support@colenielson.dev"
+  mailgun: "${MAILGUN_DOMAIN}"  # Will be loaded from env
+
+# Company branding (current hard-coded values)
+branding:
+  company_name: "Cole Nielson Email Router"
+  primary_color: "#667eea"  # Current template color
+  secondary_color: "#764ba2"  # Current template color
+  logo_url: ""  # Not currently set
+  email_signature: "AI Email Router Support Team"
+  footer_text: "© 2024 Cole Nielson Email Router. Automated email processing."
+
+# Response time commitments (migrated from templates)
+response_times:
+  support: "within 4 hours"
+  billing: "within 24 hours"
+  sales: "within 2 hours"
+  general: "within 24 hours"
+
+# Contact information (from hard-coded routing)
+contacts:
+  primary_contact: "colenielson.re@gmail.com"
+  escalation_contact: "colenielson8@gmail.com"
+  billing_contact: "colenielson8@gmail.com"
+
+# Feature flags and settings
+settings:
+  auto_reply_enabled: true
+  team_forwarding_enabled: true
+  ai_classification_enabled: true
+  escalation_enabled: true
+  monitoring_enabled: true 

@@ -1,0 +1,54 @@
+# =============================================================================
+# ROUTING RULES - COLE NIELSON (MIGRATED FROM HARD-CODED VALUES)
+# Extracted from app/routers/webhooks.py ROUTING_RULES dictionary
+# =============================================================================
+
+# Primary routing rules: category -> team member email (MIGRATED)
+routing:
+  support: "colenielson.re@gmail.com"
+  billing: "colenielson8@gmail.com"
+  sales: "colenielson@u.boisestate.edu"
+  technical: "colenielson.re@gmail.com"
+  complaint: "colenielson8@gmail.com"
+  general: "colenielson.re@gmail.com"
+
+# Escalation rules: when to escalate and to whom
+escalation:
+  # Time-based escalation (if no response within X hours)
+  time_based:
+    support: 
+      - hours: 4
+        escalate_to: "colenielson8@gmail.com"
+    billing:
+      - hours: 8
+        escalate_to: "colenielson.re@gmail.com"
+    sales:
+      - hours: 2
+        escalate_to: "colenielson.re@gmail.com"
+  
+  # Keyword-based escalation (immediate escalation)
+  keyword_based:
+    urgent: "colenielson.re@gmail.com"
+    vip: "colenielson.re@gmail.com"
+    refund: "colenielson8@gmail.com"
+    cancellation: "colenielson8@gmail.com"
+    legal: "colenielson.re@gmail.com"
+
+# Backup routing (if primary contact unavailable)
+backup_routing:
+  support: "colenielson8@gmail.com"
+  billing: "colenielson.re@gmail.com"
+  sales: "colenielson.re@gmail.com"
+  general: "colenielson8@gmail.com"
+
+# Special rules
+special_rules:
+  # VIP customers (none currently defined)
+  vip_domains: []
+  vip_route_to: "colenielson.re@gmail.com"
+  
+  # Out of hours routing
+  after_hours_route_to: "colenielson.re@gmail.com"
+  
+  # Weekend routing
+  weekend_route_to: "colenielson.re@gmail.com" 
